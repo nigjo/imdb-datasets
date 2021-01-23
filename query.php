@@ -18,15 +18,18 @@ if($search==='?'){
   $exactYear=count($argv)>3?$argv[3]:false;
 }
 
-$all=scandir('.');
-$dbfile=null;
-foreach($all as $file){
-  if(is_file($file) && basename($file,'.sqlite3')!==$file){
-    $dbfile=$file;
+function findDatabase(){
+  $all=scandir('.');
+  $dbfile=null;
+  foreach($all as $file){
+    if(is_file($file) && basename($file,'.sqlite3')!==$file){
+      $dbfile=$file;
+    }
   }
-}
-if($dbfile===null){
-  die("Keine Datenbank gefunden");
+  if($dbfile===null){
+    die("Keine Datenbank gefunden");
+  }
+  return $dbfile;
 }
 
 function queryInTitleDb($db, $q){
@@ -194,7 +197,7 @@ $esearch = SQLite3::escapeString($search);
 $knownTitles = array();
 echo '['.PHP_EOL;
 
-$db = new SQLite3($dbfile);
+$db = new SQLite3(findDatabase());
 if($GLOBALS['doExact']){
   if($GLOBALS['exactYear']!==false){
     $q=<<<QUERY
