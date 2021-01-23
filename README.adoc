@@ -1,0 +1,48 @@
+= PHP IMDB datasets Query
+
+IMDB is providing some parts of its database as "Tab Separated Values" for
+non-commercial usage. These files are descripted in https://www.imdb.com/interfaces/
+and can be download via a link from that site. The data files are GZ compressed
+and (currently) in UTF-8 encoding.
+There are a lot of tools to download and query these files. This implementation
+is written in PHP and uses SQLite as database. The result of each query are JSON
+data files, so they can easily be processed further.
+
+In my case the database is around 5GB in size and not all query do perform well,
+but it is working for me. 
+
+== Creating the database
+
+ * Make sure you have a PHP installation with SQLite extension enabled
+ * checkout this repository from https://github.com/nigjo/imdb-datasets
+ * Download all `.tsv.gz` files (exept for `title.episode.tsv.gz`, since I am
+   only interessted in 'movie' entries)
+ * copy/move all files to a `data` folder. Do not uncompress the files!
+ * run `imdbds_import.php` on command line and wait some minutes.
+   (on window use `imdbds_import.cmd`)
+
+To update your database simple re-download all files from IMDB and call 
+`imdbds_import.php` again. This will create a new database `imdbds-<date>.sqlite3`,
+the old database file can be deleted.
+
+== Query movie data
+
+A Query is simple:
+
+    php query.php "Part of movie title" > moviedata.json
+
+This will do a `LIKE` search in "primaryTitle" and "originalTitle" as well as in
+all "title" entries of "title.akas.tsv". Only `titleType = 'movie'` items will
+be found.
+
+    php query.php ! "Exact movie title" > moviedata.json
+
+This will do an "equal" search in "primaryTitle" and "originalTitle".
+Optionally you can add a "<year>" after the title string to narrow down the
+result. The "AKA" table is not searched.
+
+    php query.php ? "Part of movie title" > titles.json
+
+This will search the titles and AKAs for the title and will only put the
+title and release year in the result. The more common the query, the longer
+this query will be!
