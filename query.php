@@ -3,6 +3,20 @@ if(count($argv)<2){
   die("Keine Suchanfrage");
 }
 $search = $argv[1];
+if($search==='?'){
+  if(count($argv)<3){
+    die("Keine Suchanfrage");
+  }
+  $search = $argv[2];
+  $doTitlesOnly = true;
+}else if($search==='!'){
+  if(count($argv)<3){
+    die("Keine Suchanfrage");
+  }
+  $search = $argv[2];
+  $doExact = true;
+  $exactYear=count($argv)>3?$argv[3]:false;
+}
 
 $all=scandir('.');
 $dbfile=null;
@@ -29,13 +43,16 @@ function queryInTitleDb($db, $q){
     while(false!=($row=$res->fetchArray(SQLITE3_ASSOC))){
       error_log('found "'.$row['primaryTitle'].'" ('.$row['startYear'].')');
       $knownTitles[]=$row['tconst'];
+      if($GLOBALS['doTitlesOnly']===true){
+        $moviedata = $row['primaryTitle'].' ('.$row['startYear'].')';
+      }else{
+        $moviedata = array(
+          'timestamp'=> date(DATE_W3C),
+          'basics' => $row
+        );
+        findMovieInfos($db, $moviedata);
+      }
 
-      $moviedata = array(
-        'timestamp'=> date(DATE_W3C),
-        'basics' => $row
-      );
-      findMovieInfos($db, $moviedata);
-      
       if($head)
         echo ','.PHP_EOL;
       else
@@ -178,17 +195,42 @@ $knownTitles = array();
 echo '['.PHP_EOL;
 
 $db = new SQLite3($dbfile);
-$q=<<<QUERY
-  SELECT *
-  FROM title_basics
-  WHERE (primaryTitle LIKE '%$esearch%'
-    OR originalTitle LIKE '%$esearch%')
-    AND titleType = 'movie'
+if($GLOBALS['doExact']){
+  if($GLOBALS['exactYear']!==false){
+    $q=<<<QUERY
+      SELECT *
+      FROM title_basics
+      WHERE (primaryTitle = '$esearch'
+        OR originalTitle = '$esearch')
+        AND titleType = 'movie'
+        AND startYear = '{$GLOBALS['exactYear']}'
 QUERY;
-error_log('searching for "'.$esearch.'" in title list');
+    error_log('searching exactly for "'.$esearch.' ('.$GLOBALS['exactYear'].')" in title list');
+  }else{
+    $q=<<<QUERY
+      SELECT *
+      FROM title_basics
+      WHERE (primaryTitle = '$esearch'
+        OR originalTitle = '$esearch')
+        AND titleType = 'movie'
+QUERY;
+    error_log('searching exactly for "'.$esearch.'" in title list');
+  }
+}else{
+  $q=<<<QUERY
+    SELECT *
+    FROM title_basics
+    WHERE (primaryTitle LIKE '%$esearch%'
+      OR originalTitle LIKE '%$esearch%')
+      AND titleType = 'movie'
+QUERY;
+  error_log('searching for "'.$esearch.'" in title list');
+}
 queryInTitleDb($db, $q);
 
-searchInAkas($db,$esearch);
+if($GLOBALS['doExact']!==true){
+  searchInAkas($db,$esearch);
+}
 $db->close();
 
 echo ']'.PHP_EOL;
