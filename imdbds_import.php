@@ -8,6 +8,8 @@ if(file_exists($dbfile)){
 function loadDataset($db, $filepath){
   echo $filepath.PHP_EOL;
   $count=0;
+  $filesize = filesize($filepath);
+  $progress = 0;
   $in = gzopen($filepath, "r");
   $tablename = str_replace('.','_',basename($filepath, '.tsv.gz'));
   $db->exec('BEGIN TRANSACTION');
@@ -28,11 +30,18 @@ function loadDataset($db, $filepath){
       $db->exec($q);
     }
     ++$count;
-    if($count % 100000 == 0){
-      $db->exec('COMMIT TRANSACTION');
-      $db->exec('BEGIN TRANSACTION');
+    if($count % 100000 === 0){
+      // $db->exec('COMMIT TRANSACTION');
+      $loadposition = ftell($in);
+      $progress = floor(($loadposition / $filesize)*100);
+      // $db->exec('BEGIN TRANSACTION');
     }
-    echo 'line '.$count."\r";
+    if($count%1000===0){
+      if($progress>0)
+        echo 'line '.$count.' - '.$progress."%\r";
+      else
+        echo 'line '.$count."\r";
+    }
   }
   $db->exec('COMMIT TRANSACTION');
   gzclose($in);
