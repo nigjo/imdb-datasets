@@ -19,11 +19,11 @@ if($search==='?'){
 }
 
 function findDatabase(){
-  $all=scandir('.');
+  $all=scandir('data');
   $dbfile=null;
   foreach($all as $file){
-    if(is_file($file) && basename($file,'.sqlite3')!==$file){
-      $dbfile=$file;
+    if(is_file('data/'.$file) && basename($file,'.sqlite3')!==$file){
+      $dbfile='data/'.$file;
     }
   }
   if($dbfile===null){

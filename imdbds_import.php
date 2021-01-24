@@ -1,6 +1,6 @@
 <?php
 
-$dbfile = 'imdbds-'.date("Ymd").'.sqlite3';
+$dbfile = 'data/imdbds-'.date("Ymd").'.sqlite3';
 if(file_exists($dbfile)){
   unlink($dbfile);
 }
