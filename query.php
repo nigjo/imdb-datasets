@@ -29,6 +29,7 @@ function findDatabase(){
   if($dbfile===null){
     die("Keine Datenbank gefunden");
   }
+  error_log('found databae '.$dbfile);
   return $dbfile;
 }
 
@@ -38,7 +39,7 @@ function queryInTitleDb($db, $q){
   //error_log($q);
   $res = $db->query($q);
   if($res===false){
-    error_log('error while searching in title list');
+    error_log('error while searching in title list: '. $db->lastErrorMsg());
   }else if($res->numColumns()===0){
     error_log('nothing found in title list');
   }else{
@@ -73,7 +74,7 @@ function searchInAkas($db,$esearch){
     WHERE title LIKE '%$esearch%'
       AND (region = 'DE' OR region = 'AT' OR region = 'US' OR region = 'GB')
 QUERY;
-  error_log('searching for "'.$esearch.'" in AKA list');
+  error_log('searching for "'.$esearch.'" in AKA list: '. $db->lastErrorMsg());
   $res = $db->query($q);
   if($res===false){
     error_log('- error while searching in aka list');
@@ -82,15 +83,15 @@ QUERY;
   }else{
     while(false!=($row=$res->fetchArray(SQLITE3_ASSOC))){
       if(!in_array($row['titleId'],$knownTitles)){
-        error_log('query new title '.$row['titleId']);
+        error_log('query aka title "'.$row['title'].'"');
         $q = 'SELECT * FROM title_basics WHERE tconst=\''.$row['titleId'].'\''
           .' AND titleType = \'movie\'';
         queryInTitleDb($db, $q);
       // }else{
-        // error_log('skipping already known title '.$row['titleId']);
+        // error_log('skipping already checked id '.$row['titleId']);
       }
       if(!in_array($row['titleId'],$knownTitles)){
-        error_log('- seems to be no movie');
+        error_log(' - seems to be no movie');
         $knownTitles[]=$row['titleId'];
       }
     }
@@ -188,11 +189,13 @@ QUERY;
       //error_log('  aka '.$title);
       $moviedata['aka'][]=$row;
     }
-    error_log('found '.count($moviedata['aka']).' aka entries');
+    error_log('   - found '.count($moviedata['aka']).' aka entries');
   }
 }
 
 $esearch = SQLite3::escapeString($search);
+
+$start = time();
 
 $knownTitles = array();
 echo '['.PHP_EOL;
@@ -238,4 +241,5 @@ $db->close();
 
 echo ']'.PHP_EOL;
 //print_r($knownTitles);
+error_log("search time ".(time()-$start).'sec');
 
