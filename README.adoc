@@ -8,7 +8,7 @@ There are a lot of tools to download and query these files. This implementation
 is written in PHP and uses SQLite as database. The result of each query are JSON
 data files, so they can easily be processed further.
 
-In my case the database is around 5GB in size and not all query do perform well,
+In my case the database is around 7GB in size and not all query do perform well,
 but it is working for me. 
 
 == Creating the database
