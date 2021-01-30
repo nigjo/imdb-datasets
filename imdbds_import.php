@@ -23,6 +23,14 @@ function gzend($fh){
   return $eof;
 }
 
+function addIndex($db,$tablename, $header, $mainindex){
+  $idx=$mainindex;
+  if(in_array('ordering', $header))
+    $idx.=',ordering';
+  $q = 'CREATE UNIQUE INDEX idx_'.$tablename.' ON '.$tablename.' ('.$idx.')';
+  echo 'creating index on '.$idx.PHP_EOL;
+  $db->exec($q);
+}
 
 function loadDataset($db, $filepath){
   echo $filepath.PHP_EOL;
@@ -34,9 +42,11 @@ function loadDataset($db, $filepath){
   $progressdelta = 1000;
   $tablename = str_replace('.','_',basename($filepath, '.tsv.gz'));
   $db->exec('BEGIN TRANSACTION');
+  $header=array();
   while(false!=($line=gzgets($in))){
     $cols = explode("\t", SQLite3::escapeString(trim($line)));
     if($count===0){
+      $header=$cols;
       echo implode(';', $cols).PHP_EOL;
       $q = 'CREATE TABLE'
         .'\''.$tablename.'\' ('
@@ -44,12 +54,11 @@ function loadDataset($db, $filepath){
         .' TEXT);';
       // echo $q.PHP_EOL;
       $db->exec($q);
-    }else{
-      $q = 'INSERT INTO '.'\''.$tablename.'\' VALUES('
-        .'\''.implode('\', \'', $cols).'\''
-        .');';
-      $db->exec($q);
     }
+    $q = 'INSERT INTO '.'\''.$tablename.'\' VALUES('
+      .'\''.implode('\', \'', $cols).'\''
+      .');';
+    $db->exec($q);
     ++$count;
     if($count%$progressdelta===0){
       $loadposition = ftell($in);
@@ -61,11 +70,20 @@ function loadDataset($db, $filepath){
     }
   }
   echo 'line '.$count.' - 100%'."\r";
-  $db->exec('COMMIT TRANSACTION');
-  gzclose($in);
   echo number_format($count)." lines read.".PHP_EOL;
+  $db->exec('COMMIT TRANSACTION');
+  if(in_array('tconst', $header)){
+    addIndex($db,$tablename,$header, 'tconst');
+  } elseif(in_array('titleId', $header)){
+    addIndex($db,$tablename,$header, 'titleId');
+  } elseif(in_array('nconst', $header)){
+    addIndex($db,$tablename,$header, 'nconst');
+  }
+  
+  gzclose($in);
 }
 
+echo 'creating database '.$dbfile.PHP_EOL;
 $db = new SQLite3($dbfile);
 $db->busyTimeout(2000);
 
@@ -77,4 +95,5 @@ while (($file = readdir($dh)) !== false) {
 }
 closedir($dh);
 
+echo 'closing database.'.PHP_EOL;
 $db->close();
