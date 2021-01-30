@@ -48,7 +48,11 @@ function queryInTitleDb($db, $q){
       error_log('found "'.$row['primaryTitle'].'" ('.$row['startYear'].')');
       $knownTitles[]=$row['tconst'];
       if($GLOBALS['doTitlesOnly']===true){
-        $moviedata = $row['primaryTitle'].' ('.$row['startYear'].')';
+        $moviedata = [
+          'tconst'=>$row['tconst'],
+          'primaryTitle'=>$row['primaryTitle'],
+          'startYear'=>$row['startYear'],
+        ];
       }else{
         $moviedata = array(
           'timestamp'=> date(DATE_W3C),
@@ -206,7 +210,14 @@ echo '['.PHP_EOL;
 
 $db = new SQLite3(findDatabase());
 if($GLOBALS['doExact']){
-  if($GLOBALS['exactYear']!==false){
+  if(preg_match('/tt\d+/',$esearch)===1){
+    $q=<<<QUERY
+      SELECT *
+      FROM title_basics
+      WHERE tconst='$esearch'
+QUERY;
+    error_log('getting data for movie "'.$esearch.'"');
+  }elseif($GLOBALS['exactYear']!==false){
     $q=<<<QUERY
       SELECT *
       FROM title_basics
