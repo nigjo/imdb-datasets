@@ -78,10 +78,10 @@ function searchInAkas($db,$esearch){
     WHERE title LIKE '%$esearch%'
       AND (region = 'DE' OR region = 'AT' OR region = 'US' OR region = 'GB')
 QUERY;
-  error_log('searching for "'.$esearch.'" in AKA list: '. $db->lastErrorMsg());
+  error_log('searching for "'.$esearch.'" in AKA list');
   $res = $db->query($q);
   if($res===false){
-    error_log('- error while searching in aka list');
+    error_log('- error while searching in aka list: '. $db->lastErrorMsg());
   }else if($res->numColumns()===0){
     error_log('- nothing found in aka list');
   }else{
