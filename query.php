@@ -34,7 +34,7 @@ function findDatabase(){
 }
 
 function queryInTitleDb($db, $q){
-  global $knownTitles;
+  global $knownTitles, $firstEntryWritten;
   //echo $q.PHP_EOL;
   //error_log($q);
   $res = $db->query($q);
@@ -61,6 +61,10 @@ function queryInTitleDb($db, $q){
         echo ','.PHP_EOL;
       else
         $head=false;
+      if($firstEntryWritten)
+        echo ',';
+      else
+        $firstEntryWritten = true;      
       echo json_encode($moviedata,  JSON_PRETTY_PRINT);
     }
   }
