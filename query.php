@@ -15,18 +15,22 @@ if($oh){
 
 $search = $argv[1];
 if($search==='?'){
+  trigger_error('do title search');
   if(count($argv)<3){
     die("Keine Suchanfrage");
   }
   $search = $argv[2];
-  $doTitlesOnly = true;
+  $GLOBALS['doTitlesOnly'] = true;
 }else if($search==='!'){
+  trigger_error('do exact search');
   if(count($argv)<3){
     die("Keine Suchanfrage");
   }
   $search = $argv[2];
-  $doExact = true;
-  $exactYear=count($argv)>3?$argv[3]:false;
+  $GLOBALS['doExact'] = true;
+  $GLOBALS['exactYear']=count($argv)>3?$argv[3]:false;
+}else{
+  trigger_error('full search');
 }
 
 function findDatabase(){
