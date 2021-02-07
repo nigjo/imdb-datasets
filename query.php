@@ -2,6 +2,17 @@
 if(count($argv)<2){
   die("Keine Suchanfrage");
 }
+$oh=set_error_handler(function($n,$m){
+  if($n===1024){
+    error_log($m);
+  }else{
+    echo 'Fehler:'.$n.':'.$m;
+  }
+});
+if($oh){
+  restore_error_handler();
+}
+
 $search = $argv[1];
 if($search==='?'){
   if(count($argv)<3){
@@ -29,23 +40,23 @@ function findDatabase(){
   if($dbfile===null){
     die("Keine Datenbank gefunden");
   }
-  error_log('found databae '.$dbfile);
+  trigger_error('found databae '.$dbfile);
   return $dbfile;
 }
 
 function queryInTitleDb($db, $q){
   global $knownTitles, $firstEntryWritten;
   //echo $q.PHP_EOL;
-  //error_log($q);
+  //trigger_error($q);
   $res = $db->query($q);
   if($res===false){
-    error_log('error while searching in title list: '. $db->lastErrorMsg());
+    trigger_error('error while searching in title list: '. $db->lastErrorMsg());
   }else if($res->numColumns()===0){
-    error_log('nothing found in title list');
+    trigger_error('nothing found in title list');
   }else{
     $head=false;
     while(false!=($row=$res->fetchArray(SQLITE3_ASSOC))){
-      error_log('found "'.$row['primaryTitle'].'" ('.$row['startYear'].')');
+      trigger_error('found "'.$row['primaryTitle'].'" ('.$row['startYear'].')');
       $knownTitles[]=$row['tconst'];
       if($GLOBALS['doTitlesOnly']===true){
         $moviedata = [
@@ -82,24 +93,24 @@ function searchInAkas($db,$esearch){
     WHERE title LIKE '%$esearch%'
       AND (region = 'DE' OR region = 'AT' OR region = 'US' OR region = 'GB')
 QUERY;
-  error_log('searching for "'.$esearch.'" in AKA list');
+  trigger_error('searching for "'.$esearch.'" in AKA list');
   $res = $db->query($q);
   if($res===false){
-    error_log('- error while searching in aka list: '. $db->lastErrorMsg());
+    trigger_error('- error while searching in aka list: '. $db->lastErrorMsg());
   }else if($res->numColumns()===0){
-    error_log('- nothing found in aka list');
+    trigger_error('- nothing found in aka list');
   }else{
     while(false!=($row=$res->fetchArray(SQLITE3_ASSOC))){
       if(!in_array($row['titleId'],$knownTitles)){
-        error_log('query aka title "'.$row['title'].'"');
+        trigger_error('query aka title "'.$row['title'].'"');
         $q = 'SELECT * FROM title_basics WHERE tconst=\''.$row['titleId'].'\''
           .' AND titleType = \'movie\'';
         queryInTitleDb($db, $q);
       // }else{
-        // error_log('skipping already checked id '.$row['titleId']);
+        // trigger_error('skipping already checked id '.$row['titleId']);
       }
       if(!in_array($row['titleId'],$knownTitles)){
-        error_log(' - seems to be no movie');
+        trigger_error(' - seems to be no movie');
         $knownTitles[]=$row['titleId'];
       }
     }
@@ -124,7 +135,7 @@ function findMovieInfos($db, &$moviedata){
   $titleId = $moviedata['basics']['tconst'];
   
   // ----- Ratings ----- ----- ----- ----- -----
-  error_log(' - Ratings');
+  trigger_error(' - Ratings');
   $q=<<<QUERY
     SELECT * FROM title_ratings
       WHERE tconst = '$titleId'
@@ -135,7 +146,7 @@ QUERY;
   }
   
   // ----- Directors/Writers ----- ----- ----- ----- -----
-  error_log(' - Directors and Writers');
+  trigger_error(' - Directors and Writers');
   $q=<<<QUERY
     SELECT * FROM title_crew
       WHERE tconst = '$titleId'
@@ -158,7 +169,7 @@ QUERY;
   }
 
   // ----- Cast And Crew ----- ----- ----- ----- -----
-  error_log(' - cast and crew');
+  trigger_error(' - cast and crew');
   $q=<<<QUERY
     SELECT *
       FROM title_principals as p, name_basics as n
@@ -181,7 +192,7 @@ QUERY;
   }
   
   // ----- Alternate Titles ----- ----- ----- ----- -----
-  error_log(' - Alternate Titles');
+  trigger_error(' - Alternate Titles');
   $q=<<<QUERY
     SELECT * FROM title_akas
       WHERE titleId = '$titleId'
@@ -194,10 +205,10 @@ QUERY;
       $title = '"'.$row['title'].'"';
       if($row['region']!=='\N') $title.=' '.$row['region'];
       if($row['language']!=='\N') $title.=' '.$row['language'];
-      //error_log('  aka '.$title);
+      //trigger_error('  aka '.$title);
       $moviedata['aka'][]=$row;
     }
-    error_log('   - found '.count($moviedata['aka']).' aka entries');
+    trigger_error('   - found '.count($moviedata['aka']).' aka entries');
   }
 }
 
@@ -216,7 +227,7 @@ if($GLOBALS['doExact']){
       FROM title_basics
       WHERE tconst='$esearch'
 QUERY;
-    error_log('getting data for movie "'.$esearch.'"');
+    trigger_error('getting data for movie "'.$esearch.'"');
   }elseif($GLOBALS['exactYear']!==false){
     $q=<<<QUERY
       SELECT *
@@ -226,7 +237,7 @@ QUERY;
         AND titleType = 'movie'
         AND startYear = '{$GLOBALS['exactYear']}'
 QUERY;
-    error_log('searching exactly for "'.$esearch.' ('.$GLOBALS['exactYear'].')" in title list');
+    trigger_error('searching exactly for "'.$esearch.' ('.$GLOBALS['exactYear'].')" in title list');
   }else{
     $q=<<<QUERY
       SELECT *
@@ -235,7 +246,7 @@ QUERY;
         OR originalTitle = '$esearch')
         AND titleType = 'movie'
 QUERY;
-    error_log('searching exactly for "'.$esearch.'" in title list');
+    trigger_error('searching exactly for "'.$esearch.'" in title list');
   }
 }else{
   $q=<<<QUERY
@@ -245,7 +256,7 @@ QUERY;
       OR originalTitle LIKE '%$esearch%')
       AND titleType = 'movie'
 QUERY;
-  error_log('searching for "'.$esearch.'" in title list');
+  trigger_error('searching for "'.$esearch.'" in title list');
 }
 queryInTitleDb($db, $q);
 
@@ -256,5 +267,5 @@ $db->close();
 
 echo ']'.PHP_EOL;
 //print_r($knownTitles);
-error_log("search time ".(time()-$start).'sec');
+trigger_error("search time ".(time()-$start).'sec');
 
