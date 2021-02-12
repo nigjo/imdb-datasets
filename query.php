@@ -1,6 +1,6 @@
 <?php
 if(count($argv)<2){
-  die("Keine Suchanfrage");
+  throw new Exception("Keine Suchanfrage");
 }
 $oh=set_error_handler(function($n,$m){
   if($n===1024){
@@ -17,19 +17,28 @@ $search = $argv[1];
 if($search==='?'){
   trigger_error('do title search');
   if(count($argv)<3){
-    die("Keine Suchanfrage");
+    throw new Exception("Keine Suchanfrage");
   }
   $search = $argv[2];
+  if(empty($search)){
+    throw new Exception("Suchanfrage ungültig");
+  }
   $GLOBALS['doTitlesOnly'] = true;
 }else if($search==='!'){
   trigger_error('do exact search');
   if(count($argv)<3){
-    die("Keine Suchanfrage");
+    throw new Exception("Keine Suchanfrage");
   }
   $search = $argv[2];
+  if(empty($search)){
+    throw new Exception("Suchanfrage ungültig");
+  }
   $GLOBALS['doExact'] = true;
   $GLOBALS['exactYear']=count($argv)>3?$argv[3]:false;
 }else{
+  if(empty($search)){
+    throw new Exception("Suchanfrage ungültig");
+  }
   trigger_error('full search');
 }
 
@@ -42,7 +51,7 @@ function findDatabase(){
     }
   }
   if($dbfile===null){
-    die("Keine Datenbank gefunden");
+    throw new Exception("Keine Datenbank gefunden");
   }
   trigger_error('found databae '.$dbfile);
   return $dbfile;
