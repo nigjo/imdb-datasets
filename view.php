@@ -21,7 +21,7 @@ function serveStaticFiles() {
 }
 
 function logRequest() {
-  //[::1]:52532 [200]: GET
+//[::1]:52532 [200]: GET
   error_log(''
           . '['
           . filter_input(INPUT_SERVER, 'REMOTE_ADDR')
@@ -49,7 +49,7 @@ if (!empty($file = filter_input(INPUT_POST, 'file'))) {
 
 function uploadPosterImage() {
   if ($_FILES["posterFile"]["error"] == UPLOAD_ERR_OK) {
-    // echo PHP_EOL.'file seems to be OK';
+// echo PHP_EOL.'file seems to be OK';
     $pngfile = imagecreatefrompng($_FILES["posterFile"]["tmp_name"]);
     imagejpeg($pngfile,
             filter_input(INPUT_SERVER, 'DOCUMENT_ROOT')
@@ -77,19 +77,6 @@ function uploadPosterImage() {
   echo PHP_EOL . 'good bye';
 }
 
-$rootdir = filter_input(INPUT_SERVER, 'DOCUMENT_ROOT');
-
-$file = filter_input(INPUT_GET, 'file');
-$title = filter_input(INPUT_GET, 'title');
-$query = filter_input(INPUT_GET, 'query');
-
-if (!empty($file)) {
-  if (!empty($title)) {
-    saveJsonData($rootdir, $file, $title);
-    return;
-  }
-}
-
 function saveJsonData($rootdir, $file, $title) {
   ob_start();
   $dest = '?' . http_build_query([
@@ -111,6 +98,414 @@ function saveJsonData($rootdir, $file, $title) {
   $content = ob_get_clean();
   header('Location: ./' . $dest);
   echo $content;
+}
+
+function queryData($argv, $doflush = true) {
+  array_unshift($argv, 'query.php');
+  set_error_handler(function($n, $m) {
+    if ($n === 1024) {
+      $oldcontent = ob_get_clean();
+      echo '<div class="logitem">' . $m . '</div>' . PHP_EOL;
+      if ($doflush) {
+        flush();
+      }
+      ob_start();
+      echo $oldcontent;
+    }
+  });
+  ob_start();
+  try {
+    //trigger_error('argv: '.print_r($argv,true));
+    include __DIR__ . '/query.php';
+    $rawdata = ob_get_contents();
+  } catch (Exception $e) {
+    trigger_error('Abbruch: ' . $e->getMessage());
+    $rawdata = '{}';
+  }
+  ob_end_clean();
+  restore_error_handler();
+  return json_decode($rawdata);
+}
+
+class PageContent {
+
+  function writeHeaderContent() {
+    
+  }
+
+  function writeHeadContent() {
+    ?><h1>Lokale IMDB Datenbank</h1><?php
+  }
+
+  function writeNavigationItems() {
+    
+  }
+
+  function writeMainContent() {
+    
+  }
+
+}
+
+class Overview extends PageContent {
+
+  function writeHeadContent() {
+    echo '<h1>Übersicht</h1>';
+  }
+
+  function writeMainContent() {
+    global $rootdir;
+    ?>
+    <div>
+      <ul class="movies">
+        <?php
+        $dir = opendir($rootdir);
+        while (false !== ($file = readdir($dir))) {
+          $base = basename($file, '.mp4');
+          if ($base !== $file) {
+            echo '<li';
+            if (file_exists($rootdir . '/' . $base . '.jpg')) {
+              echo ' style="--poster: url(\'' . str_replace('\'', '\\\'', $base) . '.jpg\')"';
+            }
+            echo '>';
+            if (file_exists($rootdir . '/' . $base . '.json')) {
+              echo '<a href="?' . http_build_query(['file' => $base]) . '">';
+              echo $base;
+              echo '</a>';
+            } else {
+              echo '<a class="missing" href="?' . http_build_query(['title' => $base]) . '">';
+              echo $file;
+              echo '</a>';
+            }
+            echo '</li>';
+          }
+        }
+        ?>
+      </ul>
+    </div>
+    <?php
+  }
+
+}
+
+class Details extends PageContent {
+
+  function writeHeaderContent() {
+    ?>
+    <style>
+      .imagePreview {position:fixed;
+                     top:0;left:0;width:100vw;height:100vh;
+                     margin:0;padding:0;box-sizing:border-box;
+                     background-color:rgba(0,0,0,.5);
+      }
+      .imagePreview form>*{display:block;margin-left:auto;margin-right:auto;}
+      .imagePreview img {
+        height:70vh;max-width:60vw;
+        margin-top:10vh;border: 2px solid yellow;
+      }
+    </style>
+    <script>
+      var posterBlob = null;
+      var posterData = null;
+      document.onpaste = function (event) {
+        var items = (event.clipboardData || event.originalEvent.clipboardData).items;
+        console.log(JSON.stringify(items)); // will give you the mime types
+        for (index in items) {
+          var item = items[index];
+          if (item.kind === 'file') {
+            posterBlob = item.getAsFile();
+            var reader = new FileReader();
+            reader.onload = function (event) {
+              posterData = event.target.result;
+              console.log(posterData);
+              showNewImage(posterData);
+            }; // data url!
+            reader.readAsDataURL(posterBlob);
+          }
+        }
+      };
+
+      function showNewImage(data) {
+        document.body.appendChild(
+                document.getElementById('imagePreview').content.cloneNode(true));
+        imgDiv = document.querySelector('body>.imagePreview');
+        imgDiv.addEventListener('click', (e) => {
+          console.log(e);
+          imgDiv.remove();
+        });
+        let img = imgDiv.querySelector('img');
+        img.src = data;
+      }
+
+      function storeImage(event) {
+        new Promise((ok, fail) => {
+          let xhr = new XMLHttpRequest();
+          xhr.open("POST", './');
+          //xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+          xhr.addEventListener('load', ok);
+          xhr.addEventListener('error', fail);
+          const data = new FormData(event.submitter.form);
+          data.append('posterFile', posterBlob, 'poster.png');
+          xhr.send(data);
+        }).then(data => {
+          if (data.target.status === 200) {
+            //console.log(data.target);
+            location.reload();
+          } else {
+            console.warn(data.target);
+          }
+        });
+        return false;
+      }
+    </script>
+    <?php
+  }
+
+  function writeHeadContent() {
+    global $rootdir, $file;
+    $data = json_decode(file_get_contents(
+                    $rootdir . '/' . $file . '.json'));
+    $this->firstmovie = $data[0];
+
+    $title = $this->firstmovie->basics->primaryTitle;
+    $deFound = false;
+    foreach ($this->firstmovie->aka as $item) {
+      if ($item->region === 'DE') {
+        if ($item->types === 'imdbDisplay') {
+          $title = $item->title;
+          break;
+        }
+        if ($item->types === 'short title' || $item->types === 'promotional title') {
+          if (!$deFound) {
+            $title = $item->title;
+          }
+        } else {
+          $title = $item->title;
+        }
+        $deFound = true;
+      } else if ($item->region === 'XWW') {
+        if (!$deFound) {
+          $title = $item->title;
+        }
+      }
+    }
+    ?>
+    <h1><?php echo $title ?></h1>
+    <?php
+  }
+
+  function writeNavigationItems() {
+    ?>
+    <li><a href="./">Übersicht</a></li>
+    <li><a target="imdb" href="https://www.imdb.com/title/<?php echo $this->firstmovie->basics->tconst; ?>/">IMDB Seite</a></li>
+    <?php
+  }
+
+  function writeMainContent() {
+    global $rootdir, $file;
+    $firstmovie = $this->firstmovie;
+    ?>
+    <div>
+      <?php
+      $imgsrc = $file . '.jpg';
+      if (file_exists($rootdir . '/' . $imgsrc)) {
+        echo '<img class="poster" alt="poster" src="' . $imgsrc . '">';
+      } elseif (file_exists($rootdir . '/imdb_' . $imgsrc)) {
+        echo '<img class="poster" alt="poster" src="imdb_' . $imgsrc . '">';
+      } else {
+        //Hallo
+        echo '<a target="poster" href="'
+        . 'https://www.filmposter-archiv.de/suche.php?'
+        . http_build_query([
+            'filmtitel' => $firstmovie->basics->primaryTitle
+        ]) . '">';
+        //from https://www.studiobinder.com/blog/downloads/movie-poster-template/
+        echo '<img class="poster" alt="poster" src="view.jpg">';
+        echo '</a>';
+      }
+      ?>
+
+      <div><dl class="moviedetails">
+          <dt>Erscheinungsjahr</dt>
+          <dd><?php echo $firstmovie->basics->startYear; ?></dd>
+          <dt>Laufzeit</dt>
+          <dd><?php echo $firstmovie->basics->runtimeMinutes; ?> min</dd>
+          <dt>Genre</dt>
+          <dd><?php echo $firstmovie->basics->genres; ?></dd>
+          <dt>Regie</dt>
+          <dd>
+            <?php
+            foreach ($firstmovie->directors as $director) {
+              if ($director !== $firstmovie->directors[0]) {
+                echo ', ';
+              }
+              echo $director->primaryName;
+            }
+            ?>
+          </dd>
+          <dt>Drehbuch</dt>
+          <dd>
+            <?php
+            foreach ($firstmovie->writers as $writer) {
+              if ($writer !== $firstmovie->writers[0]) {
+                echo ', ';
+              }
+              echo $writer->primaryName;
+            }
+            ?>
+          </dd>
+        </dl></div>
+
+      <div>
+        <h2>Schauspieler</h2>
+        <div>
+          <ul class="crew">
+            <?php
+            $actorsAndActress = [];
+            if ($firstmovie->crew->actor) {
+              foreach ($firstmovie->crew->actor as $person) {
+                $actorsAndActress[intval($person->ordering)] = $person;
+              }
+            }
+            if ($firstmovie->crew->actress) {
+              foreach ($firstmovie->crew->actress as $person) {
+                $actorsAndActress[intval($person->ordering)] = $person;
+              }
+            }
+            asort($actorsAndActress);
+            foreach ($actorsAndActress as $person) {
+              echo '<li>';
+              echo $person->primaryName;
+              echo ' <span class="character">';
+              echo $person->characters;
+              echo '</span>';
+              echo '</li>';
+            }
+            ?>
+          </ul>
+        </div>
+      </div>
+      <div>
+        <h2>weitere Mitarbeiter</h2>
+        <div>
+          <ul class="crew">
+            <?php
+            $crew = [];
+            foreach ($firstmovie->crew as $gname => $group) {
+              if (!in_array($gname, ['actor', 'actress', 'director', 'writer'])) {
+                foreach ($group as $person) {
+                  $crew[intval($person->ordering)] = $person;
+                }
+              }
+            }
+            asort($crew);
+            foreach ($crew as $person) {
+              echo '<li>';
+              echo $person->primaryName;
+              echo ' <span class="character">';
+              echo $person->category;
+              echo '</span>';
+              echo '</li>';
+            }
+            ?>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <template id="imagePreview">
+      <div class="imagePreview">
+        <form onsubmit="return storeImage(event);">
+          <input type="hidden" name="file" value="<?php echo $file; ?>"/>
+          <img src="" alt="new image preview">
+          <input type="submit" value="speichern" onclick="event.stopPropagation();">
+        </form>
+      </div>
+    </template>
+
+    <?php
+  }
+
+}
+
+class Search extends PageContent {
+
+  function writeHeadContent() {
+    echo '<h1>Suche</h1>';
+  }
+
+  function writeNavigationItems() {
+    echo '<li><a href="./">Übersicht</a></li>';
+  }
+
+  function writeMainContent() {
+    global $title;
+    //TODO: Filmdaten suchen
+    $query = filter_input(INPUT_GET, 'query');
+    if (empty($query)) {
+      $query = preg_filter('/(.+) \(.*/', '$1', $title);
+    }
+    if (empty($query)) {
+      $query = $title;
+    }
+    echo '<div class="searchlog">';
+    $data = queryData(['?', $query]);
+    echo '</div>';
+    echo '<ol class="searchresult">';
+    foreach ($data as $item) {
+      echo '<li><a href="?' . http_build_query([
+          'title' => $item->tconst,
+          'file' => $title
+      ]) . '">' . $item->primaryTitle . ' (' . $item->startYear . ')</a>';
+      ?>
+      (<a target="imdb" href="https://www.imdb.com/title/<?php echo $item->tconst ?>/">IMDB</a>)
+      <?php
+      echo '</li>';
+    }
+    echo '</ol>';
+    ?>
+    <div>
+      <form method="GET">
+        <input type="hidden" name="title" value="<?php echo htmlspecialchars($title); ?>">
+        <label>Suche <input name="query" size="50" value="<?php echo htmlspecialchars($query); ?>"></label>
+        <input type="submit" value="Erneut suchen">
+      </form>
+    </div>
+    <?php
+    //echo '<pre>';print_r($data);echo '</pre>';
+  }
+
+}
+
+class PageError extends PageContent {
+  
+}
+
+$rootdir = filter_input(INPUT_SERVER, 'DOCUMENT_ROOT');
+
+$file = filter_input(INPUT_GET, 'file');
+$title = filter_input(INPUT_GET, 'title');
+//$query = filter_input(INPUT_GET, 'query');
+
+if (!empty($file)) {
+  if (!empty($title)) {
+    saveJsonData($rootdir, $file, $title);
+    return;
+  }
+}
+
+if (empty(filter_input(INPUT_SERVER, 'QUERY_STRING'))) {
+//----- ----- ----- -----  U E B E R S I C H T  ----- ----- ----- -----
+  $page = new Overview();
+} else if (!empty($file)) {
+//----- ----- ----- -----  D E T A I L S  ----- ----- ----- -----
+  $page = new Details();
+} else if (!empty($title)) {
+//----- ----- ----- -----  S U C H E  ----- ----- ----- -----
+  $page = new Search();
+} else {
+//----- ----- ----- -----  F E H L E R  ----- ----- ----- -----
+  $page = new PageError();
 }
 
 //phpinfo();
@@ -141,7 +536,9 @@ function saveJsonData($rootdir, $file, $title) {
         font-size: .75em;
         text-align: center;
         vertical-align: top;
-        margin: .5em 1em;
+        margin: .5em;
+        padding: .5em;
+        background-color: #F0F0F0;
       }
       .movies .missing{color:darksalmon;}
       .poster{max-height:10em;float: left;margin: 0 .5em .5em 0;}
@@ -161,394 +558,20 @@ function saveJsonData($rootdir, $file, $title) {
       .searchlog{max-height:24em;line-height:1.2em;overflow:auto;}
       .searchresult{max-height:26.4em;line-height:1.2em;overflow:auto;}
     </style>
-    <!-- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== -->
-    <?php
-    if (empty($_SERVER['QUERY_STRING'])) {
-      //----- ----- ----- -----  U E B E R S I C H T  ----- ----- ----- -----
-      ?>
-      <?php
-    } else if (!empty($file)) {
-      //----- ----- ----- -----  D E T A I L S  ----- ----- ----- -----
-      ?>
-      <style>
-        .imagePreview {position:fixed;
-                       top:0;left:0;width:100vw;height:100vh;
-                       margin:0;padding:0;box-sizing:border-box;
-                       background-color:rgba(0,0,0,.5);
-        }
-        .imagePreview form>*{display:block;margin-left:auto;margin-right:auto;}
-        .imagePreview img {
-          height:70vh;max-width:60vw;
-          margin-top:10vh;border: 2px solid yellow;
-        }
-      </style>
-      <script>
-        var posterBlob = null;
-        var posterData = null;
-        document.onpaste = function (event) {
-          var items = (event.clipboardData || event.originalEvent.clipboardData).items;
-          console.log(JSON.stringify(items)); // will give you the mime types
-          for (index in items) {
-            var item = items[index];
-            if (item.kind === 'file') {
-              posterBlob = item.getAsFile();
-              var reader = new FileReader();
-              reader.onload = function (event) {
-                posterData = event.target.result;
-                console.log(posterData);
-                showNewImage(posterData);
-              }; // data url!
-              reader.readAsDataURL(posterBlob);
-            }
-          }
-        };
-
-        function showNewImage(data) {
-          document.body.appendChild(
-                  document.getElementById('imagePreview').content.cloneNode(true));
-          imgDiv = document.querySelector('body>.imagePreview');
-          imgDiv.addEventListener('click', (e) => {
-            console.log(e);
-            imgDiv.remove();
-          });
-          let img = imgDiv.querySelector('img');
-          img.src = data;
-        }
-
-        function storeImage(event) {
-          new Promise((ok, fail) => {
-            let xhr = new XMLHttpRequest();
-            xhr.open("POST", './');
-            //xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-            xhr.addEventListener('load', ok);
-            xhr.addEventListener('error', fail);
-            const data = new FormData(event.submitter.form);
-            data.append('posterFile', posterBlob, 'poster.png');
-            xhr.send(data);
-          }).then(data => {
-            if (data.target.status === 200) {
-              //console.log(data.target);
-              location.reload();
-            } else {
-              console.warn(data.target);
-            }
-          });
-          return false;
-        }
-      </script>
-      <?php
-    } else if (!empty($title)) {
-      //----- ----- ----- -----  S U C H E  ----- ----- ----- -----
-      ?>
-      <?php
-    } else {
-      //----- ----- ----- -----  F E H L E R  ----- ----- ----- -----
-      ?>
-      <?php
-    }
-    ?>
+    <?php $page->writeHeaderContent(); ?>    
   </head>
   <body>
-    <!-- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== -->
     <header>
-      <?php
-      $firstmovie = null;
-      if (empty($_SERVER['QUERY_STRING'])) {
-        //----- ----- ----- -----  U E B E R S I C H T  ----- ----- ----- -----
-        ?>
-        <h1>Übersicht</h1>
-        <?php
-      } else if (!empty($file)) {
-        //----- ----- ----- -----  D E T A I L S  ----- ----- ----- -----
-        $data = json_decode(file_get_contents(
-                        $rootdir . '/' . $file . '.json'));
-        $firstmovie = $data[0];
-
-        $title = $firstmovie->basics->primaryTitle;
-        $deFound = false;
-        foreach ($firstmovie->aka as $item) {
-          if ($item->region === 'DE') {
-            if ($item->types === 'imdbDisplay') {
-              $title = $item->title;
-              break;
-            }
-            if ($item->types === 'short title' || $item->types === 'promotional title') {
-              if (!$deFound) {
-                $title = $item->title;
-              }
-            } else {
-              $title = $item->title;
-            }
-            $deFound = true;
-          } else if ($item->region === 'XWW') {
-            if (!$deFound) {
-              $title = $item->title;
-            }
-          }
-        }
-        ?>
-        <h1><?php echo $title ?></h1>
-        <?php
-      } else if (!empty($title)) {
-        //----- ----- ----- -----  S U C H E  ----- ----- ----- -----
-        //TODO:
-        ?><h1>Suche</h1><?php
-      } else {
-        //----- ----- ----- -----  F E H L E R  ----- ----- ----- -----
-        //TODO:
-        ?><h1>Lokale IMDB Datenbank</h1><?php
-      }
-      ?>
+      <?php $page->writeHeadContent(); ?>
     </header>
-    <!-- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== -->
-    <!-- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== -->
     <nav>
       <ul>
-        <?php
-        if (empty($_SERVER['QUERY_STRING'])) {
-          //----- ----- ----- -----  U E B E R S I C H T  ----- ----- ----- -----
-          ?>
-          <?php
-        } else if (!empty($file)) {
-          //----- ----- ----- -----  D E T A I L S  ----- ----- ----- -----
-          ?>
-          <li><a href="./">Übersicht</a></li>
-          <li><a target="imdb" href="https://www.imdb.com/title/<?php echo $firstmovie->basics->tconst ?>/">IMDB Seite</a></li>
-          <?php
-        } else if (!empty($title)) {
-          //----- ----- ----- -----  S U C H E  ----- ----- ----- -----
-          ?>
-          <li><a href="./">Übersicht</a></li>
-          <?php
-        } else {
-          
-        }
-        ?>
+        <?php $page->writeNavigationItems(); ?>
       </ul>
     </nav>
-    <!-- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== -->
-    <!-- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== -->
     <main>
-      <?php
-      if (empty($_SERVER['QUERY_STRING'])) {
-        //----- ----- ----- -----  U E B E R S I C H T  ----- ----- ----- -----
-        ?>
-        <div>
-          <ul class="movies">
-            <?php
-            $dir = opendir($rootdir);
-            while (false !== ($file = readdir($dir))) {
-              $base = basename($file, '.mp4');
-              if ($base !== $file) {
-                echo '<li';
-                if (file_exists($rootdir . '/' . $base . '.jpg')) {
-                  echo ' style="--poster: url(\'' . str_replace('\'', '\\\'', $base) . '.jpg\')"';
-                }
-                echo '>';
-                if (file_exists($rootdir . '/' . $base . '.json')) {
-                  echo '<a href="?' . http_build_query(['file' => $base]) . '">';
-                  echo $base;
-                  echo '</a>';
-                } else {
-                  echo '<a class="missing" href="?' . http_build_query(['title' => $base]) . '">';
-                  echo $file;
-                  echo '</a>';
-                }
-                echo '</li>';
-              }
-            }
-            ?>
-          </ul>
-        </div>
-        <?php
-      } else if (!empty($file)) {
-        //----- ----- ----- -----  D E T A I L S  ----- ----- ----- -----
-        ?>
-        <div>
-          <?php
-          $imgsrc = $file . '.jpg';
-          if (file_exists($rootdir . '/' . $imgsrc)) {
-            echo '<img class="poster" alt="poster" src="' . $imgsrc . '">';
-          } elseif (file_exists($rootdir . '/imdb_' . $imgsrc)) {
-            echo '<img class="poster" alt="poster" src="imdb_' . $imgsrc . '">';
-          } else {
-            //Hallo
-            echo '<a target="poster" href="'
-            . 'https://www.filmposter-archiv.de/suche.php?'
-            . http_build_query([
-                'filmtitel' => $firstmovie->basics->primaryTitle
-            ]) . '">';
-            //from https://www.studiobinder.com/blog/downloads/movie-poster-template/
-            echo '<img class="poster" alt="poster" src="view.jpg">';
-            echo '</a>';
-          }
-          ?>
-
-          <div><dl class="moviedetails">
-              <dt>Erscheinungsjahr</dt>
-              <dd><?php echo $firstmovie->basics->startYear; ?></dd>
-              <dt>Laufzeit</dt>
-              <dd><?php echo $firstmovie->basics->runtimeMinutes; ?> min</dd>
-              <dt>Genre</dt>
-              <dd><?php echo $firstmovie->basics->genres; ?></dd>
-              <dt>Regie</dt>
-              <dd>
-                <?php
-                foreach ($firstmovie->directors as $director) {
-                  if ($director !== $firstmovie->directors[0]) {
-                    echo ', ';
-                  }
-                  echo $director->primaryName;
-                }
-                ?>
-              </dd>
-              <dt>Drehbuch</dt>
-              <dd>
-                <?php
-                foreach ($firstmovie->writers as $writer) {
-                  if ($writer !== $firstmovie->writers[0]) {
-                    echo ', ';
-                  }
-                  echo $writer->primaryName;
-                }
-                ?>
-              </dd>
-            </dl></div>
-
-          <div>
-            <h2>Schauspieler</h2>
-            <div>
-              <ul class="crew">
-                <?php
-                $actorsAndActress = [];
-                if ($firstmovie->crew->actor)
-                  foreach ($firstmovie->crew->actor as $person) {
-                    $actorsAndActress[intval($person->ordering)] = $person;
-                  }
-                if ($firstmovie->crew->actress)
-                  foreach ($firstmovie->crew->actress as $person) {
-                    $actorsAndActress[intval($person->ordering)] = $person;
-                  }
-                asort($actorsAndActress);
-                foreach ($actorsAndActress as $person) {
-                  echo '<li>';
-                  echo $person->primaryName;
-                  echo ' <span class="character">';
-                  echo $person->characters;
-                  echo '</span>';
-                  echo '</li>';
-                }
-                ?>
-              </ul>
-            </div>
-          </div>
-          <div>
-            <h2>weitere Mitarbeiter</h2>
-            <div>
-              <ul class="crew">
-                <?php
-                $crew = [];
-                foreach ($firstmovie->crew as $gname => $group) {
-                  if (!in_array($gname, ['actor', 'actress', 'director', 'writer'])) {
-                    foreach ($group as $person) {
-                      $crew[intval($person->ordering)] = $person;
-                    }
-                  }
-                }
-                asort($crew);
-                foreach ($crew as $person) {
-                  echo '<li>';
-                  echo $person->primaryName;
-                  echo ' <span class="character">';
-                  echo $person->category;
-                  echo '</span>';
-                  echo '</li>';
-                }
-                ?>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        <template id="imagePreview">
-          <div class="imagePreview">
-            <form onsubmit="return storeImage(event);">
-              <input type="hidden" name="file" value="<?php echo $file; ?>"/>
-              <img src="" alt="new image preview">
-              <input type="submit" value="speichern" onclick="event.stopPropagation();">
-            </form>
-          </div>
-        </template>
-
-        <?php
-      } else if (!empty($title)) {
-        //----- ----- ----- -----  S U C H E  ----- ----- ----- -----
-        //TODO: Filmdaten suchen
-        if (empty($query)) {
-          $query = preg_filter('/(.+) \(.*/', '$1', $title);
-        }
-        if (empty($query)) {
-          $query = $title;
-        }
-        echo '<div class="searchlog">';
-        $data = queryData(['?', $query]);
-        echo '</div>';
-        echo '<ol class="searchresult">';
-        foreach ($data as $item) {
-          echo '<li><a href="?' . http_build_query([
-              'title' => $item->tconst,
-              'file' => $title
-          ]) . '">' . $item->primaryTitle . ' (' . $item->startYear . ')</a>';
-          ?>
-          (<a target="imdb" href="https://www.imdb.com/title/<?php echo $item->tconst ?>/">IMDB</a>)
-          <?php
-          echo '</li>';
-        }
-        echo '</ol>';
-        ?>
-        <div>
-          <form method="GET">
-            <input type="hidden" name="title" value="<?php echo htmlspecialchars($title); ?>">
-            <label>Suche <input name="query" size="50" value="<?php echo htmlspecialchars($query); ?>"></label>
-            <input type="submit" value="Erneut suchen">
-          </form>
-        </div>
-        <?php
-        //echo '<pre>';print_r($data);echo '</pre>';
-      } else {
-        //----- ----- ----- -----  F E H L E R  ----- ----- ----- -----
-        //TODO: Filmdaten suchen
-      }
-
-      function queryData($argv, $doflush = true) {
-        array_unshift($argv, 'query.php');
-        set_error_handler(function($n, $m) {
-          if ($n === 1024) {
-            $oldcontent = ob_get_clean();
-            echo '<div class="logitem">' . $m . '</div>' . PHP_EOL;
-            if ($doflush) {
-              flush();
-            }
-            ob_start();
-            echo $oldcontent;
-          }
-        });
-        ob_start();
-        try {
-          //trigger_error('argv: '.print_r($argv,true));
-          include __DIR__ . '/query.php';
-          $rawdata = ob_get_contents();
-        } catch (Exception $e) {
-          trigger_error('Abbruch: ' . $e->getMessage());
-          $rawdata = '{}';
-        }
-        ob_end_clean();
-        restore_error_handler();
-        return json_decode($rawdata);
-      }
-      ?>
+      <?php $page->writeMainContent(); ?>
     </main>
-    <!-- ===== ===== ===== ===== ===== ===== ===== ===== ===== ===== -->
     <footer>
       IMDB&reg; Dataset Viewer - &copy; 2021 Jens Hofschröer
     </footer>
