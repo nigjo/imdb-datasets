@@ -1,8 +1,4 @@
 <?php
-if (false === serveStaticFiles()) {
-  return false;
-}
-
 function serveStaticFiles() {
   $request = filter_input(INPUT_SERVER, 'REQUEST_URI');
   if (preg_match('/\.(jpg|png|ico|css|js)$/', $request)) {
@@ -33,18 +29,6 @@ function logRequest() {
           . ' '
           . filter_input(INPUT_SERVER, 'REQUEST_URI')
           , 4);
-}
-
-logRequest();
-
-//if (filter_input(INPUT_SERVER, 'REQUEST_URI') === '/info.php') {
-//  phpinfo();
-//  return;
-//}
-
-if (!empty($file = filter_input(INPUT_POST, 'file'))) {
-  uploadPosterImage();
-  return;
 }
 
 function uploadPosterImage() {
@@ -150,7 +134,10 @@ class PageContent {
 class Overview extends PageContent {
 
   function writeHeadContent() {
-    echo '<h1>Übersicht</h1>';
+    global $rootdir;
+    ?><h1>Übersicht - <?php
+      echo basename($rootdir);
+    ?></h1><?php
   }
 
   function writeHeaderContent() {
@@ -611,7 +598,33 @@ class Search extends PageContent {
 }
 
 class PageError extends PageContent {
-  
+  function writeMainContent() {
+    ?>
+    <p>
+      Es ist ein Fehler aufgetreten.
+      Mit den angegebenen Parametern konnte nicht ermittelt werden,
+      was genau angezeigt werden sollte.
+    </p>
+    <p>
+      <a href="view.php">zur Übersicht</a>
+    </p>
+    <?php
+  }
+}
+
+if (false === serveStaticFiles()) {
+  return false;
+}
+logRequest();
+
+//if (filter_input(INPUT_SERVER, 'REQUEST_URI') === '/info.php') {
+//  phpinfo();
+//  return;
+//}
+
+if (!empty($file = filter_input(INPUT_POST, 'file'))) {
+  uploadPosterImage();
+  return;
 }
 
 $rootdir = filter_input(INPUT_SERVER, 'DOCUMENT_ROOT');
