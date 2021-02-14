@@ -226,11 +226,12 @@ class Details extends PageContent {
     <style>
       .poster{max-height:10em;float: left;margin: 0 .5em .5em 0;}
       h2{clear:left;}
+      .character{color:gray;}
       .crew{display:inline-block;margin:0;padding:0}
       .crew li{display:flex;text-align:right;}
-      .crew li span::before{content:'';flex-grow:1;border-bottom:1px dotted gray;
-                            min-width:1em;margin:0 .5em;box-sizing:border-box;}
-      .crew li span{color:gray;display:inline-flex;flex-grow:1;}
+      .crew li .character::before{content:'';flex-grow:1;border-bottom:1px dotted gray;
+                                  min-width:1em;margin:0 .5em;box-sizing:border-box;}
+      .crew li .character{display:inline-flex;flex-grow:1;}
       .moviedetails{flex-wrap: wrap;}
       .moviedetails dt{float:left;min-width:9em;font-variant:small-caps;}
       .moviedetails dt{float:left;font-variant:small-caps;
@@ -395,6 +396,18 @@ class Details extends PageContent {
                 echo ', ';
               }
               echo $writer->primaryName;
+              if ($firstmovie->crew->writer) {
+                foreach ($firstmovie->crew->writer as $person) {
+                  if ($person->nconst === $writer->nconst && 
+                          strpos($person->job, 'screenplay') === false && 
+                          $person->job!=='written by'&& 
+                          $person->job!=='\\N') {
+                    echo ' <span class="character">(';
+                    echo $person->job;
+                    echo ')</span>';
+                  }
+                }
+              }
             }
             ?>
           </dd>
@@ -448,6 +461,11 @@ class Details extends PageContent {
               echo $person->primaryName;
               echo ' <span class="character">';
               echo $person->category;
+              if (!empty($person->job) &&
+                      $person->job !== '\\N' &&
+                      $person->job !== $person->category) {
+                echo '/' . $person->job;
+              }
               echo '</span>';
               echo '</li>';
             }
