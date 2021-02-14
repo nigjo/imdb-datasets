@@ -508,33 +508,15 @@ class Search extends PageContent {
       .searchlog{max-height:24em;line-height:1.2em;overflow:auto;}
       .searchresult{max-height:26.4em;line-height:1.2em;overflow:auto;}
       form{display:inline-block;}
-      #autosearchtimeout:before,#autosearchtimeout:after{
-        width:var(--progress);
-        position:absolute;
-        height:1rem;
-        font-size:.8rem;
-        line-height:1rem;
-        text-align:center;
-        border-radius: .5rem;
-        display: block;
-      }
-      #autosearchtimeout:before{
-        content:'';
-        background-color:red;
-      }
-      #autosearchtimeout:after{
-        content:attr(data-progress);
-        color:white;
-      }
+      #autosearchtimeout:before,#autosearchtimeout:after{white-space:nowrap;
+        width:var(--progress);display:block;position:absolute;height:1rem;
+        font-size:.8rem;line-height:1rem;text-align:center;border-radius:.5rem;}
+      #autosearchtimeout:before{content:'';background-color:green;}
+      #autosearchtimeout:after{content:attr(data-progress);color:white;background:var(--barstyle);}
       #autosearchtimeout{
-        position:relative;
-        display:block;
-        width:100%;
-        height:1rem;
-        background-color:lightgray;
-        margin:.5rem 0;
-        border-radius: .5rem;
-      }
+        --barstyle:linear-gradient(180deg, transparent, rgba(255,255,255,.4), transparent, transparent);
+        position:relative;display:block;width:100%;height:1rem;margin:.5rem 0;
+        border-radius:.5rem;background:var(--barstyle);background-color:gray;}
     </style>
     <script>
       document.addEventListener('DOMContentLoaded', () => {
