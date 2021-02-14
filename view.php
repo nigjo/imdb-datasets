@@ -556,10 +556,20 @@ class Search extends PageContent {
     $doSearch = !empty($query);
     if ($doSearch) {
       echo '<div class="searchlog">';
-      $data = queryData(['?', $query]);
+      if (preg_match('/tt\d+/', $query)) {
+        $data = queryData(['!', $query]);
+      } else {
+        $data = queryData(['?', $query]);
+      }
       echo '</div>';
       echo '<ol class="searchresult">';
+      echo '<!--';
+      print_r($data);
+      echo '-->';
       foreach ($data as $item) {
+        if (property_exists($item, 'basics')) {
+          $item = $item->basics;
+        }
         echo '<li><a href="?' . http_build_query([
             'title' => $item->tconst,
             'file' => $title
