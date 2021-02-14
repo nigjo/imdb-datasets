@@ -1,4 +1,5 @@
 <?php
+
 function serveStaticFiles() {
   $request = filter_input(INPUT_SERVER, 'REQUEST_URI');
   if (preg_match('/\.(jpg|png|ico|css|js)$/', $request)) {
@@ -113,6 +114,9 @@ function queryData($argv, $doflush = true) {
 
 class PageContent {
 
+  function __construct(){
+  }
+
   function writeHeaderContent() {
     writeCommonCSS();
   }
@@ -139,35 +143,19 @@ class Overview extends PageContent {
       echo basename($rootdir);
     ?></h1><?php
   }
+  
+  function writeNavigationItems(){
+    ?>
+      <li><a href="view.php?list=acting">Schauspieler*innen</a></li>
+      <li><a href="view.php?list=directing">Regiseur*innen</a></li>
+      <li><a href="view.php?list=producing">Produzent*innen</a></li>
+      <li><a href="view.php?list=composing">Komponist*innen</a></li>
+      <li><a href="view.php?list=genre">Genre</a></li>
+    <?php
+  }
 
   function writeHeaderContent() {
     parent::writeHeaderContent();
-    ?>
-    <style>
-      :root{--poster:url(view.jpg);}
-      .movies a::before {
-        display: block;
-        content: ' ';
-        background-image: var(--poster);
-        background-size: contain;
-        background-position: center;
-        background-repeat: no-repeat;
-        height: 10rem;
-      }
-      .movies li {
-        display: inline-block;
-        width: 10rem;
-        height: 12rem;
-        font-size: .75em;
-        text-align: center;
-        vertical-align: top;
-        margin: .5em;
-        padding: .5em;
-        background-color: #F0F0F0;
-      }
-      .movies .missing{color:darksalmon;}
-    </style>
-    <?php
   }
 
   function writeMainContent() {
@@ -178,29 +166,33 @@ class Overview extends PageContent {
         <?php
         $dir = opendir($rootdir);
         while (false !== ($file = readdir($dir))) {
-          $base = basename($file, '.mp4');
-          if ($base !== $file) {
-            echo '<li';
-            if (file_exists($rootdir . '/' . $base . '.jpg')) {
-              echo ' style="--poster: url(\'' . str_replace('\'', '\\\'', $base) . '.jpg\')"';
-            }
-            echo '>';
-            if (file_exists($rootdir . '/' . $base . '.json')) {
-              echo '<a href="?' . http_build_query(['file' => $base]) . '">';
-              echo $base;
-              echo '</a>';
-            } else {
-              echo '<a class="missing" href="?' . http_build_query(['title' => $base]) . '">';
-              echo $file;
-              echo '</a>';
-            }
-            echo '</li>';
-          }
+          Overview::writeListItem($rootdir, $file);
         }
         ?>
       </ul>
     </div>
     <?php
+  }
+  
+  static function writeListItem($rootdir, $file){
+    $base = basename($file, '.mp4');
+    if ($base !== $file) {
+      echo '<li';
+      if (file_exists($rootdir . '/' . $base . '.jpg')) {
+        echo ' style="--poster: url(\'' . str_replace('\'', '\\\'', $base) . '.jpg\')"';
+      }
+      echo '>';
+      if (file_exists($rootdir . '/' . $base . '.json')) {
+        echo '<a href="?' . http_build_query(['file' => $base]) . '">';
+        echo $base;
+        echo '</a>';
+      } else {
+        echo '<a class="missing" href="?' . http_build_query(['title' => $base]) . '">';
+        echo $file;
+        echo '</a>';
+      }
+      echo '</li>';
+    }
   }
 
 }
@@ -597,6 +589,181 @@ class Search extends PageContent {
 
 }
 
+class ViewLists extends PageContent {
+  function __construct(){
+    parent::__construct();
+    $this->listname = filter_input(INPUT_GET, 'list');
+  }
+  
+  function writeHeadContent(){
+    ?><h1>Filmliste - <?php echo $this->listname; ?></h1><?php
+  }
+  function writeNavigationItems(){
+    ?>
+      <li><a href="view.php">Übersicht</a></li>
+    <?php
+  }
+  
+  function getItems(&$data, $path){
+    //echo ($data===null).'~'.$path[0].'<br>';
+    if(!empty($data) && property_exists($data, $path[0])) {
+      $prop = $path[0];
+      if(count($path)>1){
+        return $this->getItems($data->$prop, array_slice($path, 1));
+      }else{
+        return $data->$prop;
+      }
+    }
+    return false;
+  }
+  
+  function scanFolderWithFilter(...$filters){
+    global $rootdir;
+    $dir = opendir($rootdir);
+    $result = array();
+    while (false !== ($file = readdir($dir))) {
+      $base = basename($file, '.mp4');
+      if ($base !== $file &&
+          file_exists($rootdir.'/'.$base.'.json')) {
+        //echo $rootdir.'/'.$base.'.json'.'<br>';
+        $data = json_decode(file_get_contents($rootdir.'/'.$base.'.json'));
+        foreach($data as $entry){
+          $result[$entry->basics->tconst]['file']=$base;
+          //$result[$entry->basics->tconst]['basics']=$entry->basics;
+          foreach($filters as $filter){
+            $items = $this->getItems($entry, explode('/', $filter));
+            // echo $entry->basics->tconst.' '.$filter.': '
+              // .htmlspecialchars(print_r($items,true)).'<br>';
+            if(!empty($items)){
+              $result[$entry->basics->tconst][$filter]=$items;
+            }
+          }
+        }
+        unset($data);
+      }
+    }
+    return $result;
+  }
+  
+  function writeHeaderContent(){
+    parent::writeHeaderContent();
+    ?><style>
+dl{display:flex;flex-wrap:wrap}
+dt{
+  display:inline-flex;justify-content:center;align-items:center;
+  margin:1px .1em;width:10em;height:3rem;
+  line-height:1rem;font-size:.9rem;text-align:center;
+  border:1px solid blue;
+  box-sizing: border-box;
+}
+dt+dd{
+  display:none;order:1;
+}
+dt.group{
+  order:-2 !important;
+  flex-basis: 100%;
+  font-size:1.8rem;
+  font-weight:bold;
+}
+dt.group+dd{
+  display:block;
+  order:-1 !important;
+  flex-basis: 100%;
+}
+    </style><script>
+    lastSelectedGroup = null;
+    function toggleView(evt){
+      if(lastSelectedGroup){
+        if(lastSelectedGroup!=evt.target){
+          lastSelectedGroup.classList.toggle('group');
+        }
+      }
+      evt.target.classList.toggle('group');
+      if(evt.target.classList.contains('group')){
+        lastSelectedGroup=evt.target;
+      }else{
+        lastSelectedGroup=null;
+      }
+    }
+    </script><?php
+  }
+  
+  function writeMainContent(){
+    $methodname = 'writeList'.$this->listname;
+    if(method_exists($this, $methodname)) {
+      call_user_func([$this, $methodname]);
+    } else {
+      $error = new PageError();
+      $error->writeMainContent();
+    }
+  }
+  
+  function writeListacting(){
+    $this->writePersonsList("crew/actor", "crew/actress");
+  }
+  function writeListdirecting(){
+    $this->writePersonsList("crew/director");
+  }
+  function writeListproducing(){
+    $this->writePersonsList("crew/producer");
+  }
+  function writeListcomposing(){
+    $this->writePersonsList("crew/composer");
+  }
+  
+  function writePersonsList(...$filters){
+    $entries = $this->scanFolderWithFilter(...$filters);
+    
+    $persons=array();
+    foreach($entries as $entry){
+      $file = $entry['file'];
+      foreach($entry as $filter){
+        if(gettype($filter)==='array'){
+          foreach($filter as $person){
+            $persons[$person->primaryName][]=$entry['file'];
+          }
+        }
+      }
+    }
+    
+    uksort($persons, function($a,$b){
+      $na = array_pop(explode(' ',$a));
+      $nb = array_pop(explode(' ',$b));
+      return strcasecmp($na,$nb);
+    });
+    $this->writeContent($persons);
+  }
+
+  function writeListgenre(){
+    echo 'list of genres';
+    $entries = $this->scanFolderWithFilter("basics/genres");
+    $genres = array();
+    foreach($entries as $entry){
+      foreach(explode(',', $entry["basics/genres"]) as $genre){
+        $genres[$genre][]=$entry['file'];
+      }
+    }
+    ksort($genres);
+    $this->writeContent($genres);
+  }
+  
+  function writeContent($data){
+    global $rootdir;
+    echo '<dl class="movies" style="--poster:url(view.jpg)">';
+    foreach($data as $caption=>$list) {
+      echo '<dt class="" onclick="toggleView(event);" style="order:';
+      echo (1000-count($list));
+      echo '">'.$caption.'</dt>';
+      echo '<dd><ul>';
+      foreach($list as $file){
+        Overview::writeListItem($rootdir, $file.'.mp4');
+      }
+      echo '</ul></dd>';
+    }
+    echo '</dl>';
+  }
+}
+
 class PageError extends PageContent {
   function writeMainContent() {
     ?>
@@ -649,6 +816,9 @@ if (empty(filter_input(INPUT_SERVER, 'QUERY_STRING'))) {
 } else if (!empty($title)) {
 //----- ----- ----- -----  S U C H E  ----- ----- ----- -----
   $page = new Search();
+} else if (!empty(filter_input(INPUT_GET, 'list'))) {
+//----- ----- ----- -----  L I S T E N  ----- ----- ----- -----
+  $page = new ViewLists();
 } else {
 //----- ----- ----- -----  F E H L E R  ----- ----- ----- -----
   $page = new PageError();
@@ -662,6 +832,28 @@ function writeCommonCSS() {
     body{font-family:Segoe UI,sans-serif;}
     footer{margin-top:1rem;border-top:1px solid gray;}
     a{color:inherit;}
+    :root{--poster:url(view.jpg);}
+    .movies a::before {
+      display: block;
+      content: ' ';
+      background-image: var(--poster);
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      height: 10rem;
+    }
+    .movies li {
+      display: inline-block;
+      width: 10rem;
+      height: 12rem;
+      font-size: .75em;
+      text-align: center;
+      vertical-align: top;
+      margin: .5em;
+      padding: .5em;
+      background-color: #F0F0F0;
+    }
+    .movies .missing{color:darksalmon;}
   </style>
   <?php
 }
