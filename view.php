@@ -595,7 +595,11 @@ class Search extends PageContent {
         <input type="submit" value="Erneut suchen">
         <?php
         if (!$doSearch) {
-          echo '<div id="autosearchtimeout" style="--progress:0%" data-progress=""></div>';
+          ?><div id="autosearchtimeout" style="--progress:0%" data-progress=""></div><?php
+        }else{
+          ?><div><a target="imdb" href="https://www.imdb.com/find?<?php 
+            echo http_build_query(['q'=>$query]);
+          ?>">IMDB durchsuchen</a></div><?php
         }
         ?>
       </form>
