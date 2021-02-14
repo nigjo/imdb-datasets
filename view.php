@@ -130,7 +130,7 @@ function queryData($argv, $doflush = true) {
 class PageContent {
 
   function writeHeaderContent() {
-    
+    writeCommonCSS();
   }
 
   function writeHeadContent() {
@@ -151,6 +151,36 @@ class Overview extends PageContent {
 
   function writeHeadContent() {
     echo '<h1>Übersicht</h1>';
+  }
+
+  function writeHeaderContent() {
+    parent::writeHeaderContent();
+    ?>
+    <style>
+      :root{--poster:url(view.jpg);}
+      .movies a::before {
+        display: block;
+        content: ' ';
+        background-image: var(--poster);
+        background-size: contain;
+        background-position: center;
+        background-repeat: no-repeat;
+        height: 10rem;
+      }
+      .movies li {
+        display: inline-block;
+        width: 10rem;
+        height: 12rem;
+        font-size: .75em;
+        text-align: center;
+        vertical-align: top;
+        margin: .5em;
+        padding: .5em;
+        background-color: #F0F0F0;
+      }
+      .movies .missing{color:darksalmon;}
+    </style>
+    <?php
   }
 
   function writeMainContent() {
@@ -191,8 +221,22 @@ class Overview extends PageContent {
 class Details extends PageContent {
 
   function writeHeaderContent() {
+    parent::writeHeaderContent();
     ?>
     <style>
+      .poster{max-height:10em;float: left;margin: 0 .5em .5em 0;}
+      h2{clear:left;}
+      .crew{display:inline-block;margin:0;padding:0}
+      .crew li{display:flex;text-align:right;}
+      .crew li span::before{content:'';flex-grow:1;border-bottom:1px dotted gray;
+                            min-width:1em;margin:0 .5em;box-sizing:border-box;}
+      .crew li span{color:gray;display:inline-flex;flex-grow:1;}
+      .moviedetails{flex-wrap: wrap;}
+      .moviedetails dt{float:left;min-width:9em;font-variant:small-caps;}
+      .moviedetails dt{float:left;font-variant:small-caps;
+                       display:inline-flex;min-width:10em;}
+      .moviedetails dt:after{content:'';border-bottom:1px dotted gray;
+                             flex-grow:1;min-width:1em;margin:0 .5em;}
       .imagePreview {position:fixed;
                      top:0;left:0;width:100vw;height:100vh;
                      margin:0;padding:0;box-sizing:border-box;
@@ -438,37 +482,112 @@ class Search extends PageContent {
     echo '<li><a href="./">Übersicht</a></li>';
   }
 
+  function writeHeaderContent() {
+    parent::writeHeaderContent();
+    ?>
+    <style>
+      .logitem{display:list-item;list-style-type:square;margin-left:1em}
+      .searchlog{max-height:24em;line-height:1.2em;overflow:auto;}
+      .searchresult{max-height:26.4em;line-height:1.2em;overflow:auto;}
+      form{display:inline-block;}
+      #autosearchtimeout:before,#autosearchtimeout:after{
+        width:var(--progress);
+        position:absolute;
+        height:1rem;
+        font-size:.8rem;
+        line-height:1rem;
+        text-align:center;
+        border-radius: .5rem;
+        display: block;
+      }
+      #autosearchtimeout:before{
+        content:'';
+        background-color:red;
+      }
+      #autosearchtimeout:after{
+        content:attr(data-progress);
+        color:white;
+      }
+      #autosearchtimeout{
+        position:relative;
+        display:block;
+        width:100%;
+        height:1rem;
+        background-color:lightgray;
+        margin:.5rem 0;
+        border-radius: .5rem;
+      }
+    </style>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const fulltime = 10000;
+        const tick = 10;
+        var start = Date.now();
+
+        var bar = document.getElementById('autosearchtimeout');
+        function progressTick() {
+          let current = Date.now() - start;
+          if (fulltime - current < 0) {
+            current = fulltime;
+          }
+          let prog = ((fulltime - current) * 100) / fulltime;
+          bar.dataset.progress = (current === fulltime ? 'reload'
+                  : Math.floor((fulltime - current) / 1000 + 1) + ' sec');
+          bar.style.setProperty('--progress', prog + '%');
+          if (current < fulltime) {
+            setTimeout(progressTick, tick);
+          } else {
+            console.log(bar);
+            bar.parentNode.submit();
+          }
+        }
+        if (bar) {
+          setTimeout(progressTick, tick);
+        }
+      });
+    </script>
+    <?php
+  }
+
   function writeMainContent() {
     global $title;
     //TODO: Filmdaten suchen
     $query = filter_input(INPUT_GET, 'query');
+    $doSearch = !empty($query);
+    if ($doSearch) {
+      echo '<div class="searchlog">';
+      $data = queryData(['?', $query]);
+      echo '</div>';
+      echo '<ol class="searchresult">';
+      foreach ($data as $item) {
+        echo '<li><a href="?' . http_build_query([
+            'title' => $item->tconst,
+            'file' => $title
+        ]) . '">' . $item->primaryTitle . ' (' . $item->startYear . ')</a>';
+        ?>
+        (<a target="imdb" href="https://www.imdb.com/title/<?php echo $item->tconst ?>/">IMDB</a>)
+        <?php
+        echo '</li>';
+      }
+      echo '</ol>';
+    }
     if (empty($query)) {
       $query = preg_filter('/(.+) \(.*/', '$1', $title);
     }
     if (empty($query)) {
       $query = $title;
     }
-    echo '<div class="searchlog">';
-    $data = queryData(['?', $query]);
-    echo '</div>';
-    echo '<ol class="searchresult">';
-    foreach ($data as $item) {
-      echo '<li><a href="?' . http_build_query([
-          'title' => $item->tconst,
-          'file' => $title
-      ]) . '">' . $item->primaryTitle . ' (' . $item->startYear . ')</a>';
-      ?>
-      (<a target="imdb" href="https://www.imdb.com/title/<?php echo $item->tconst ?>/">IMDB</a>)
-      <?php
-      echo '</li>';
-    }
-    echo '</ol>';
     ?>
     <div>
       <form method="GET">
         <input type="hidden" name="title" value="<?php echo htmlspecialchars($title); ?>">
         <label>Suche <input name="query" size="50" value="<?php echo htmlspecialchars($query); ?>"></label>
         <input type="submit" value="Erneut suchen">
+        <?php
+        if (!$doSearch) {
+          echo '<div id="autosearchtimeout" style="--progress:0%" data-progress=""></div>';
+        }
+        ?>
       </form>
     </div>
     <?php
@@ -510,54 +629,20 @@ if (empty(filter_input(INPUT_SERVER, 'QUERY_STRING'))) {
 
 //phpinfo();
 //return;
+function writeCommonCSS() {
+  ?>
+  <style>
+    body{font-family:Segoe UI,sans-serif;}
+    footer{margin-top:1rem;border-top:1px solid gray;}
+    a{color:inherit;}
+  </style>
+  <?php
+}
 ?>
 <!DOCTYPE html>
 <html>
   <head>
     <title>Local IMDB View</title>
-    <style>
-      :root{--poster:url(view.jpg);}
-      body{font-family:Segoe UI,sans-serif;}
-      footer{margin-top:1rem;border-top:1px solid gray;}
-      a{color:inherit;}
-      .movies a::before {
-        display: block;
-        content: ' ';
-        background-image: var(--poster);
-        background-size: contain;
-        background-position: center;
-        background-repeat: no-repeat;
-        height: 10rem;
-      }
-      .movies li {
-        display: inline-block;
-        width: 10rem;
-        height: 12rem;
-        font-size: .75em;
-        text-align: center;
-        vertical-align: top;
-        margin: .5em;
-        padding: .5em;
-        background-color: #F0F0F0;
-      }
-      .movies .missing{color:darksalmon;}
-      .poster{max-height:10em;float: left;margin: 0 .5em .5em 0;}
-      h2{clear:left;}
-      .crew{display:inline-block;margin:0;padding:0}
-      .crew li{display:flex;text-align:right;}
-      .crew li span::before{content:'';flex-grow:1;border-bottom:1px dotted gray;
-                            min-width:1em;margin:0 .5em;box-sizing:border-box;}
-      .crew li span{color:gray;display:inline-flex;flex-grow:1;}
-      .moviedetails{flex-wrap: wrap;}
-      .moviedetails dt{float:left;min-width:9em;font-variant:small-caps;}
-      .moviedetails dt{float:left;font-variant:small-caps;
-                       display:inline-flex;min-width:10em;}
-      .moviedetails dt:after{content:'';border-bottom:1px dotted gray;
-                             flex-grow:1;min-width:1em;margin:0 .5em;}
-      .logitem{display:list-item;list-style-type:square;margin-left:1em}
-      .searchlog{max-height:24em;line-height:1.2em;overflow:auto;}
-      .searchresult{max-height:26.4em;line-height:1.2em;overflow:auto;}
-    </style>
     <?php $page->writeHeaderContent(); ?>    
   </head>
   <body>
