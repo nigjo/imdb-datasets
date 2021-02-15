@@ -13,33 +13,38 @@ if($oh){
   restore_error_handler();
 }
 
-$search = $argv[1];
-if($search==='?'){
-  trigger_error('do title search');
-  if(count($argv)<3){
-    throw new Exception("Keine Suchanfrage");
+return queryDatabase(...$argv);
+
+function checkMethod(...$argv){
+  $search = $argv[1];
+  if($search==='?'){
+    trigger_error('do title search');
+    if(count($argv)<3){
+      throw new Exception("Keine Suchanfrage");
+    }
+    $search = $argv[2];
+    if(empty($search)){
+      throw new Exception("Suchanfrage ungültig");
+    }
+    $GLOBALS['doTitlesOnly'] = true;
+  }else if($search==='!'){
+    trigger_error('do exact search');
+    if(count($argv)<3){
+      throw new Exception("Keine Suchanfrage");
+    }
+    $search = $argv[2];
+    if(empty($search)){
+      throw new Exception("Suchanfrage ungültig");
+    }
+    $GLOBALS['doExact'] = true;
+    $GLOBALS['exactYear']=count($argv)>3?$argv[3]:false;
+  }else{
+    if(empty($search)){
+      throw new Exception("Suchanfrage ungültig");
+    }
+    trigger_error('full search');
   }
-  $search = $argv[2];
-  if(empty($search)){
-    throw new Exception("Suchanfrage ungültig");
-  }
-  $GLOBALS['doTitlesOnly'] = true;
-}else if($search==='!'){
-  trigger_error('do exact search');
-  if(count($argv)<3){
-    throw new Exception("Keine Suchanfrage");
-  }
-  $search = $argv[2];
-  if(empty($search)){
-    throw new Exception("Suchanfrage ungültig");
-  }
-  $GLOBALS['doExact'] = true;
-  $GLOBALS['exactYear']=count($argv)>3?$argv[3]:false;
-}else{
-  if(empty($search)){
-    throw new Exception("Suchanfrage ungültig");
-  }
-  trigger_error('full search');
+  return $search;
 }
 
 function findDatabase(){
@@ -100,13 +105,23 @@ function queryInTitleDb($db, $q){
 
 function searchInAkas($db,$esearch){
   global $knownTitles;
-  $q = <<<QUERY
-  SELECT *
-    FROM title_akas
-    WHERE title LIKE '%$esearch%'
-      AND (region = 'DE' OR region = 'AT' OR region = 'US' OR region = 'GB')
+  if($GLOBALS['scanTitles']){
+    $q = <<<QUERY
+    SELECT *
+      FROM title_akas
+      WHERE title = '$esearch'
+        AND (region = 'DE' OR region = 'AT' OR region = 'US' OR region = 'GB')
 QUERY;
-  trigger_error('searching for "'.$esearch.'" in AKA list');
+    trigger_error('searching title "'.$esearch.'" in AKA list');
+  } else {
+    $q = <<<QUERY
+    SELECT *
+      FROM title_akas
+      WHERE title LIKE '%$esearch%'
+        AND (region = 'DE' OR region = 'AT' OR region = 'US' OR region = 'GB')
+QUERY;
+    trigger_error('searching for "'.$esearch.'" in AKA list');
+  }
   $res = $db->query($q);
   if($res===false){
     trigger_error('- error while searching in aka list: '. $db->lastErrorMsg());
@@ -225,11 +240,16 @@ QUERY;
   }
 }
 
+function queryDatabase(...$argv){
+global $knownTitles,$firstEntryWritten;
+
+$search = checkMethod(...$argv);
 $esearch = SQLite3::escapeString($search);
 
 $start = time();
 
 $knownTitles = array();
+$firstEntryWritten = false;
 echo '['.PHP_EOL;
 
 $db = new SQLite3(findDatabase());
@@ -262,14 +282,25 @@ QUERY;
     trigger_error('searching exactly for "'.$esearch.'" in title list');
   }
 }else{
-  $q=<<<QUERY
-    SELECT *
-    FROM title_basics
-    WHERE (primaryTitle LIKE '%$esearch%'
-      OR originalTitle LIKE '%$esearch%')
-      AND titleType = 'movie'
+  if($GLOBALS['scanTitles']) {
+    $q=<<<QUERY
+      SELECT *
+      FROM title_basics
+      WHERE (primaryTitle = '$esearch'
+        OR originalTitle = '$esearch')
+        AND titleType = 'movie'
 QUERY;
-  trigger_error('searching for "'.$esearch.'" in title list');
+    trigger_error('searching title "'.$esearch.'" in title list');
+  }else{
+    $q=<<<QUERY
+      SELECT *
+      FROM title_basics
+      WHERE (primaryTitle LIKE '%$esearch%'
+        OR originalTitle LIKE '%$esearch%')
+        AND titleType = 'movie'
+QUERY;
+    trigger_error('searching for "'.$esearch.'" in title list');
+  }
 }
 queryInTitleDb($db, $q);
 
@@ -282,3 +313,4 @@ echo ']'.PHP_EOL;
 //print_r($knownTitles);
 trigger_error("search time ".(time()-$start).'sec');
 
+}
