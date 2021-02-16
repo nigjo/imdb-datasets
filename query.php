@@ -110,7 +110,8 @@ function searchInAkas($db,$esearch){
     SELECT *
       FROM title_akas
       WHERE title = '$esearch'
-        AND (region = 'DE' OR region = 'AT' OR region = 'US' OR region = 'GB')
+        AND (region = 'DE' OR region = 'AT' OR region = 'XWG'
+          OR region = 'US' OR region = 'GB')
 QUERY;
     trigger_error('searching title "'.$esearch.'" in AKA list');
   } else {
@@ -118,7 +119,8 @@ QUERY;
     SELECT *
       FROM title_akas
       WHERE title LIKE '%$esearch%'
-        AND (region = 'DE' OR region = 'AT' OR region = 'US' OR region = 'GB')
+        AND (region = 'DE' OR region = 'AT' OR region = 'XWG'
+          OR region = 'US' OR region = 'GB')
 QUERY;
     trigger_error('searching for "'.$esearch.'" in AKA list');
   }

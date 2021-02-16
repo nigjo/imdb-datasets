@@ -299,6 +299,7 @@ class Details extends PageContent {
 
     $title = $this->firstmovie->basics->primaryTitle;
     $deFound = false;
+    $someFound = false;
     foreach ($this->firstmovie->aka as $item) {
       if ($item->region === 'DE') {
         if ($item->types === 'imdbDisplay') {
@@ -313,8 +314,19 @@ class Details extends PageContent {
           $title = $item->title;
         }
         $deFound = true;
-      } else if ($item->region === 'XWW') {
+        $someFound = true;
+      } else if ($item->region === 'XWG') {
         if (!$deFound) {
+          $title = $item->title;
+          $someFound = true;
+        }
+      } else if ($item->region === 'AT') {
+        if (!$deFound) {
+          $title = $item->title;
+          $someFound = true;
+        }
+      } else if ($item->region === 'XWW') {
+        if (!$someFound) {
           $title = $item->title;
         }
       }
@@ -322,6 +334,7 @@ class Details extends PageContent {
     ?>
     <h1><?php echo $title ?></h1>
     <?php
+    $this->title = $title;
   }
 
   function writeNavigationItems() {
@@ -347,7 +360,7 @@ class Details extends PageContent {
         echo '<a target="poster" href="'
         . 'https://www.filmposter-archiv.de/suche.php?'
         . http_build_query([
-            'filmtitel' => $firstmovie->basics->primaryTitle
+            'filmtitel' => $this->title
         ]) . '">';
         //from https://www.studiobinder.com/blog/downloads/movie-poster-template/
         echo '<img class="poster" alt="poster" src="view.jpg">';
