@@ -3,9 +3,11 @@
 function serveStaticFiles() {
   $request = filter_input(INPUT_SERVER, 'REQUEST_URI');
   if (preg_match('/\.(jpg|png|ico|css|js)$/', $request)) {
-    if (basename($request) === 'view.jpg') {
+    if (file_exists(basename($request))) {
       logRequest();
-      echo file_get_contents('view.jpg');
+      header('Content-Type: '
+      .mime_content_type (basename($request)));
+      echo file_get_contents(basename($request));
       return;
     }
     if (basename($request) === 'favicon.ico') {
@@ -100,8 +102,12 @@ function queryData($argv, $doflush = true) {
   });
   ob_start();
   try {
-    //trigger_error('argv: '.print_r($argv,true));
-    include __DIR__ . '/query.php';
+    if(function_exists('queryDatabase')){
+      queryDatabase(...$argv);
+    }else{
+      //trigger_error('argv: '.print_r($argv,true));
+      include_once __DIR__ . '/query.php';
+    }
     $rawdata = ob_get_contents();
   } catch (Exception $e) {
     trigger_error('Abbruch: ' . $e->getMessage());
@@ -538,7 +544,11 @@ class Search extends PageContent {
       if (preg_match('/tt\d+/', $query)) {
         $data = queryData(['!', $query]);
       } else {
+        // $GLOBALS['scanTitles'] = true;
+        // $data1 = queryData(['?', $query]);
+        // $GLOBALS['scanTitles'] = false;
         $data = queryData(['?', $query]);
+        // $data = array_merge($data1, $data2);
       }
       echo '</div>';
       echo '<ol class="searchresult">';
@@ -854,6 +864,8 @@ function writeCommonCSS() {
       background-color: #F0F0F0;
     }
     .movies .missing{color:darksalmon;}
+    footer>div{display:inline;}
+    footer>div:not(:first-child)::before{content:'-';}
   </style>
   <?php
 }
@@ -877,7 +889,15 @@ function writeCommonCSS() {
       <?php $page->writeMainContent(); ?>
     </main>
     <footer>
-      IMDB&reg; Dataset Viewer - &copy; 2021 Jens Hofschröer
+      <div>
+      IMDB&reg; Dataset Viewer
+      </div><div>
+      &copy; 2021 Jens Hofschröer
+      </div><div>
+      <a href="https://github.com/nigjo/imdb-datasets"
+      >View on Github <img alt="Octocat" src="GitHub-Mark-32px.png" style="height:.9em;"
+      ></a>
+      </div>
     </footer>
   </body>
 </html>
