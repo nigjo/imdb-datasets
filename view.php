@@ -19,6 +19,24 @@ function serveStaticFiles() {
   }
 }
 
+function getFolderPath($relative=false, $subpath=false){
+  $root = realpath(filter_input(INPUT_SERVER, 'DOCUMENT_ROOT'));
+  //echo 'R:"'.$root.'"'.PHP_EOL;
+  $parampath=filter_input(INPUT_GET, 'path');
+  $path = realpath($parampath);
+  if($path===false) {
+    $path = realpath($root.'/'.$parampath.($subpath?('/'.$subpath):''));
+  }
+  //echo 'P:"'.$path.'"'.PHP_EOL;
+  if(!empty($path) && strpos($path, $root) === 0){
+    return $relative
+        ?($path===$root?'.'
+          :str_replace('\\','/', substr($path, strlen($root)+1)))
+        :$path;
+  }
+  return $relative?'.':$root;
+}
+
 function logRequest() {
 //[::1]:52532 [200]: GET
   error_log(''
@@ -39,7 +57,7 @@ function uploadPosterImage() {
 // echo PHP_EOL.'file seems to be OK';
     $pngfile = imagecreatefrompng($_FILES["posterFile"]["tmp_name"]);
     imagejpeg($pngfile,
-            filter_input(INPUT_SERVER, 'DOCUMENT_ROOT')
+            getFolderPath()
             . '/' . filter_input(INPUT_POST, 'file') . '.jpg', 80);
     echo 'File stored as ' . filter_input(INPUT_POST, 'file') . '.jpg';
   } else {
@@ -66,7 +84,7 @@ function uploadPosterImage() {
 
 function saveJsonData($rootdir, $file, $title) {
   ob_start();
-  $dest = '?' . http_build_query([
+  $dest = '?' . buildQuery([
               'file' => $file
   ]);
   echo '"' . $title . '" speichern  als "' . $file . '.json"<br/>';
@@ -144,20 +162,36 @@ class PageContent {
 class Overview extends PageContent {
 
   function writeHeadContent() {
-    global $rootdir;
     ?><h1>Übersicht - <?php
-      echo basename($rootdir);
+      echo basename(getFolderPath());
     ?></h1><?php
   }
   
   function writeNavigationItems(){
     ?>
-      <li><a href="view.php?list=acting">Schauspieler*innen</a></li>
-      <li><a href="view.php?list=directing">Regiseur*innen</a></li>
-      <li><a href="view.php?list=producing">Produzent*innen</a></li>
-      <li><a href="view.php?list=composing">Komponist*innen</a></li>
-      <li><a href="view.php?list=genre">Genre</a></li>
+      <li><a href="view.php?<?php echo buildQuery(['list'=>'acting']);?>">Schauspieler*innen</a></li>
+      <li><a href="view.php?<?php echo buildQuery(['list'=>'directing']);?>">Regiseur*innen</a></li>
+      <li><a href="view.php?<?php echo buildQuery(['list'=>'producing']);?>">Produzent*innen</a></li>
+      <li><a href="view.php?<?php echo buildQuery(['list'=>'composing']);?>">Komponist*innen</a></li>
+      <li><a href="view.php?<?php echo buildQuery(['list'=>'genre']);?>">Genre</a></li>
+    </ul><ul>
     <?php
+      $folder = getFolderPath();
+      $withParent = getRelativePath('.')!=='./.';
+      $dir = opendir($folder);
+      while (false !== ($file = readdir($dir))) {
+        if(is_dir($folder.'/'.$file)){
+          if($withParent&&$file==='..'){
+            ?><li><a href="?<?php
+              echo buildQuery(['path'=>getRelativePath($file)]);
+            ?>"><?php echo $file.'#'.getFolderPath(true,'..');?></a></li><?php
+          }else if($file[0]!=='.'){
+            ?><li><a href="?<?php
+              echo buildQuery(['path'=>getRelativePath($file)]);
+            ?>"><?php echo $file;?></a></li><?php
+          }
+        }
+      }
   }
 
   function writeHeaderContent() {
@@ -165,14 +199,13 @@ class Overview extends PageContent {
   }
 
   function writeMainContent() {
-    global $rootdir;
     ?>
     <div>
       <ul class="movies">
         <?php
-        $dir = opendir($rootdir);
+        $dir = opendir(getFolderPath());
         while (false !== ($file = readdir($dir))) {
-          Overview::writeListItem($rootdir, $file);
+          Overview::writeListItem(getFolderPath(), $file);
         }
         ?>
       </ul>
@@ -185,15 +218,17 @@ class Overview extends PageContent {
     if ($base !== $file) {
       echo '<li';
       if (file_exists($rootdir . '/' . $base . '.jpg')) {
-        echo ' style="--poster: url(\'' . str_replace('\'', '\\\'', $base) . '.jpg\')"';
+        $imgfile = getRelativePath($base. '.jpg');
+        echo ' style="--poster: url(\'' . 
+            str_replace('\'', '\\\'', $imgfile) . '\')"';
       }
       echo '>';
       if (file_exists($rootdir . '/' . $base . '.json')) {
-        echo '<a href="?' . http_build_query(['file' => $base]) . '">';
+        echo '<a href="?' . buildQuery(['file' => $base]) . '">';
         echo $base;
         echo '</a>';
       } else {
-        echo '<a class="missing" href="?' . http_build_query(['title' => $base]) . '">';
+        echo '<a class="missing" href="?' . buildQuery(['title' => $base]) . '">';
         echo $file;
         echo '</a>';
       }
@@ -201,6 +236,21 @@ class Overview extends PageContent {
     }
   }
 
+}
+
+function getRelativePath($file){
+  return getFolderPath(true).'/'.$file;
+}
+
+function buildQuery($data=array()){
+  if(!array_key_exists('path', $data)) {
+    $path = filter_input(INPUT_GET, 'path');
+    if(!empty($path)) {
+      $merged = array_merge(['path'=>$path], $data);
+      return http_build_query($merged);
+    }
+  }
+  return http_build_query($data);
 }
 
 class Details extends PageContent {
@@ -270,7 +320,7 @@ class Details extends PageContent {
       function storeImage(event) {
         new Promise((ok, fail) => {
           let xhr = new XMLHttpRequest();
-          xhr.open("POST", './');
+          xhr.open("POST", './?'+<?php echo '"'.buildQuery().'"';?>);
           //xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
           xhr.addEventListener('load', ok);
           xhr.addEventListener('error', fail);
@@ -292,9 +342,9 @@ class Details extends PageContent {
   }
 
   function writeHeadContent() {
-    global $rootdir, $file;
+    global $file;
     $data = json_decode(file_get_contents(
-                    $rootdir . '/' . $file . '.json'));
+                    getFolderPath() . '/' . $file . '.json'));
     $this->firstmovie = $data[0];
 
     $title = $this->firstmovie->basics->primaryTitle;
@@ -339,27 +389,27 @@ class Details extends PageContent {
 
   function writeNavigationItems() {
     ?>
-    <li><a href="./">Übersicht</a></li>
+    <li><a href="?<?php echo buildQuery();?>">Übersicht</a></li>
     <li><a target="imdb" href="https://www.imdb.com/title/<?php echo $this->firstmovie->basics->tconst; ?>/">IMDB Seite</a></li>
     <?php
   }
 
   function writeMainContent() {
-    global $rootdir, $file;
+    global $file;
     $firstmovie = $this->firstmovie;
     ?>
     <div>
       <?php
       $imgsrc = $file . '.jpg';
-      if (file_exists($rootdir . '/' . $imgsrc)) {
-        echo '<img class="poster" alt="poster" src="' . $imgsrc . '">';
-      } elseif (file_exists($rootdir . '/imdb_' . $imgsrc)) {
-        echo '<img class="poster" alt="poster" src="imdb_' . $imgsrc . '">';
+      if (file_exists(getFolderPath() . '/' . $imgsrc)) {
+        echo '<img class="poster" alt="poster" src="' . getRelativePath($imgsrc) . '">';
+      } elseif (file_exists(getFolderPath() . '/imdb_' . $imgsrc)) {
+        echo '<img class="poster" alt="poster" src="'.getRelativePath('imdb_' . $imgsrc) . '">';
       } else {
         //Hallo
         echo '<a target="poster" href="'
         . 'https://www.filmposter-archiv.de/suche.php?'
-        . http_build_query([
+        . buildQuery([
             'filmtitel' => $this->title
         ]) . '">';
         //from https://www.studiobinder.com/blog/downloads/movie-poster-template/
@@ -495,7 +545,7 @@ class Search extends PageContent {
   }
 
   function writeNavigationItems() {
-    echo '<li><a href="./">Übersicht</a></li>';
+    echo '<li><a href="./?'.buildQuery().'">Übersicht</a></li>';
   }
 
   function writeHeaderContent() {
@@ -572,7 +622,7 @@ class Search extends PageContent {
         if (property_exists($item, 'basics')) {
           $item = $item->basics;
         }
-        echo '<li><a href="?' . http_build_query([
+        echo '<li><a href="?' . buildQuery([
             'title' => $item->tconst,
             'file' => $title
         ]) . '">' . $item->primaryTitle . ' (' . $item->startYear . ')</a>';
@@ -592,6 +642,7 @@ class Search extends PageContent {
     ?>
     <div>
       <form method="GET">
+        <input type="hidden" name="path" value="<?php echo getRelativePath('.'); ?>">
         <input type="hidden" name="title" value="<?php echo htmlspecialchars($title); ?>">
         <label>Suche <input name="query" size="50" value="<?php echo htmlspecialchars($query); ?>"></label>
         <input type="submit" value="Erneut suchen">
@@ -623,7 +674,7 @@ class ViewLists extends PageContent {
   }
   function writeNavigationItems(){
     ?>
-      <li><a href="view.php">Übersicht</a></li>
+      <li><a href="view.php?<?php echo buildQuery([]);?>">Übersicht</a></li>
     <?php
   }
   
@@ -641,15 +692,14 @@ class ViewLists extends PageContent {
   }
   
   function scanFolderWithFilter(...$filters){
-    global $rootdir;
-    $dir = opendir($rootdir);
+    $dir = opendir(getFolderPath());
     $result = array();
     while (false !== ($file = readdir($dir))) {
       $base = basename($file, '.mp4');
       if ($base !== $file &&
-          file_exists($rootdir.'/'.$base.'.json')) {
-        //echo $rootdir.'/'.$base.'.json'.'<br>';
-        $data = json_decode(file_get_contents($rootdir.'/'.$base.'.json'));
+          file_exists(getFolderPath().'/'.$base.'.json')) {
+        //echo getFolderPath().'/'.$base.'.json'.'<br>';
+        $data = json_decode(file_get_contents(getFolderPath().'/'.$base.'.json'));
         foreach($data as $entry){
           $result[$entry->basics->tconst]['file']=$base;
           //$result[$entry->basics->tconst]['basics']=$entry->basics;
@@ -771,7 +821,6 @@ dt.group+dd{
   }
   
   function writeContent($data){
-    global $rootdir;
     echo '<dl class="movies" style="--poster:url(view.jpg)">';
     foreach($data as $caption=>$list) {
       echo '<dt class="" onclick="toggleView(event);" style="order:';
@@ -779,7 +828,7 @@ dt.group+dd{
       echo '">'.$caption.'</dt>';
       echo '<dd><ul>';
       foreach($list as $file){
-        Overview::writeListItem($rootdir, $file.'.mp4');
+        Overview::writeListItem(getFolderPath(), $file.'.mp4');
       }
       echo '</ul></dd>';
     }
@@ -796,7 +845,7 @@ class PageError extends PageContent {
       was genau angezeigt werden sollte.
     </p>
     <p>
-      <a href="view.php">zur Übersicht</a>
+      <a href="view.php?<?php echo buildQuery([]);?>">zur Übersicht</a>
     </p>
     <?php
   }
@@ -817,15 +866,13 @@ if (!empty($file = filter_input(INPUT_POST, 'file'))) {
   return;
 }
 
-$rootdir = filter_input(INPUT_SERVER, 'DOCUMENT_ROOT');
-
 $file = filter_input(INPUT_GET, 'file');
 $title = filter_input(INPUT_GET, 'title');
 //$query = filter_input(INPUT_GET, 'query');
 
 if (!empty($file)) {
   if (!empty($title)) {
-    saveJsonData($rootdir, $file, $title);
+    saveJsonData(getFolderPath(), $file, $title);
     return;
   }
 }
@@ -842,6 +889,8 @@ if (empty(filter_input(INPUT_SERVER, 'QUERY_STRING'))) {
 } else if (!empty(filter_input(INPUT_GET, 'list'))) {
 //----- ----- ----- -----  L I S T E N  ----- ----- ----- -----
   $page = new ViewLists();
+} else if (!empty(filter_input(INPUT_GET, 'path'))){
+  $page = new Overview();
 } else {
 //----- ----- ----- -----  F E H L E R  ----- ----- ----- -----
   $page = new PageError();
