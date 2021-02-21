@@ -166,7 +166,7 @@ class Overview extends PageContent {
       echo basename(getFolderPath());
     ?></h1><?php
   }
-  
+
   function writeNavigationItems(){
     ?>
       <li><a href="view.php?<?php echo buildQuery(['list'=>'acting']);?>">Schauspieler*innen</a></li>
@@ -212,9 +212,10 @@ class Overview extends PageContent {
     </div>
     <?php
   }
-  
+
   static function writeListItem($rootdir, $file){
-    $base = basename($file, '.mp4');
+    $ext = filter_input(INPUT_GET, 'ext');
+    $base = basename($file, '.'.($ext?$ext:'mp4'));
     if ($base !== $file) {
       echo '<li';
       if (file_exists($rootdir . '/' . $base . '.jpg')) {
@@ -243,12 +244,17 @@ function getRelativePath($file){
 }
 
 function buildQuery($data=array()){
+  $ext = filter_input(INPUT_GET, 'ext');
+  $result = array();
+  if($ext)$result['ext']=$ext;
+  //$base = basename($file, '.'.($ext?$ext:'mp4'));
   if(!array_key_exists('path', $data)) {
     $path = filter_input(INPUT_GET, 'path');
-    if(!empty($path)) {
-      $merged = array_merge(['path'=>$path], $data);
-      return http_build_query($merged);
-    }
+    if(!empty($path))$result['path']=$path;
+  }
+  if(!empty($result)){
+    $merged = array_merge($result, $data);
+    return http_build_query($merged);
   }
   return http_build_query($data);
 }
@@ -642,6 +648,7 @@ class Search extends PageContent {
     ?>
     <div>
       <form method="GET">
+        <input type="hidden" name="ext" value="<?php echo filter_input(INPUT_GET, 'ext'); ?>">
         <input type="hidden" name="path" value="<?php echo getRelativePath('.'); ?>">
         <input type="hidden" name="title" value="<?php echo htmlspecialchars($title); ?>">
         <label>Suche <input name="query" size="50" value="<?php echo htmlspecialchars($query); ?>"></label>
@@ -692,10 +699,11 @@ class ViewLists extends PageContent {
   }
   
   function scanFolderWithFilter(...$filters){
+    $ext = filter_input(INPUT_GET, 'ext');
     $dir = opendir(getFolderPath());
     $result = array();
     while (false !== ($file = readdir($dir))) {
-      $base = basename($file, '.mp4');
+      $base = basename($file, '.'.($ext?$ext:'mp4'));
       if ($base !== $file &&
           file_exists(getFolderPath().'/'.$base.'.json')) {
         //echo getFolderPath().'/'.$base.'.json'.'<br>';
@@ -828,7 +836,7 @@ dt.group+dd{
       echo '">'.$caption.'</dt>';
       echo '<dd><ul>';
       foreach($list as $file){
-        Overview::writeListItem(getFolderPath(), $file.'.mp4');
+        Overview::writeListItem(getFolderPath(), $file.'.'.($ext?$ext:'mp4'));
       }
       echo '</ul></dd>';
     }
@@ -866,9 +874,14 @@ if (!empty($file = filter_input(INPUT_POST, 'file'))) {
   return;
 }
 
+$q=array();
+parse_str(filter_input(INPUT_SERVER, 'QUERY_STRING'), $q);
+//print_r($q);
+
 $file = filter_input(INPUT_GET, 'file');
 $title = filter_input(INPUT_GET, 'title');
 //$query = filter_input(INPUT_GET, 'query');
+unset($q['ext']);
 
 if (!empty($file)) {
   if (!empty($title)) {
@@ -877,7 +890,7 @@ if (!empty($file)) {
   }
 }
 
-if (empty(filter_input(INPUT_SERVER, 'QUERY_STRING'))) {
+if (empty($q)) {
 //----- ----- ----- -----  U E B E R S I C H T  ----- ----- ----- -----
   $page = new Overview();
 } else if (!empty($file)) {
