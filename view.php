@@ -264,7 +264,7 @@ class Details extends PageContent {
   function writeHeaderContent() {
     parent::writeHeaderContent();
     ?>
-    <style>
+      <style>
       .poster{max-height:10em;float: left;margin: 0 .5em .5em 0;}
       h2{clear:left;}
       .character{color:gray;}
@@ -621,9 +621,9 @@ class Search extends PageContent {
       }
       echo '</div>';
       echo '<ol class="searchresult">';
-      echo '<!--';
-      print_r($data);
-      echo '-->';
+      usort($data, function($a, $b) {
+        return strcasecmp($a->primaryTitle, $b->primaryTitle);
+      });
       foreach ($data as $item) {
         if (property_exists($item, 'basics')) {
           $item = $item->basics;
