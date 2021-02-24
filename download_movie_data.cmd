@@ -20,6 +20,10 @@ echo %line:~0,50%
 title download %1 - %~nx0
 set FROM=%baseurl%/%1
 set TO=data\%1
-set dlstatus_%1=OK
+set dlstatus_%1=PENDING
 powershell -C "$ProgressPreference = 'SilentlyContinue';Invoke-WebRequest -Uri %FROM% -OutFile %TO%;"
-if errorlevel 1 set set dlstatus_%1=%ERRORLEVEL%
+if errorlevel 1 (
+set dlstatus_%1=ERROR-%ERRORLEVEL%
+) else (
+set dlstatus_%1=OK
+)
