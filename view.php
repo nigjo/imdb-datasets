@@ -89,16 +89,25 @@ function saveJsonData($rootdir, $file, $title) {
   ]);
   echo '"' . $title . '" speichern  als "' . $file . '.json"<br/>';
   echo '<a href="' . $dest . '">' . $file . '</a><br/>';
+  
+  $outfile = $rootdir . '/' . $file . '.json';
 
   $data = queryData(['!', $title], false);
   echo '<pre>';
   print_r($data);
   echo '</pre>';
+  
+  if(file_exists($outfile)){
+    $oldcontent = file_get_contents($outfile);
+    $olddata = json_decode($oldcontent);
+    array_unshift($olddata, $data[0]);
+    $data = $olddata;
+  }
 
   $output = preg_replace_callback('/^ +/m', function ($m) {
     return str_repeat(' ', strlen($m[0]) / 2);
   }, json_encode($data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
-  file_put_contents($rootdir . '/' . $file . '.json', $output);
+  file_put_contents($outfile, $output);
 
   $content = ob_get_clean();
   header('Location: ./' . $dest);
@@ -390,10 +399,15 @@ class Details extends PageContent {
   }
 
   function writeNavigationItems() {
+    global $file;
     ?>
     <li><a href="?<?php echo buildQuery();?>">Übersicht</a></li>
     <li><a target="imdb" href="https://www.imdb.com/title/<?php echo $this->firstmovie->basics->tconst; ?>/">IMDB Seite</a></li>
     <li><a target="ofdb" href="https://ssl.ofdb.de/view.php?page=suchergebnis&Kat=IMDb&SText=<?php echo $this->firstmovie->basics->tconst; ?>">OFDb Seite</a></li>
+    <li><a href="?<?php echo buildQuery([
+            'title' => $this->firstmovie->basics->tconst,
+            'file' => $file
+        ]); ?>">Datenupdate</a></li>
     <?php
   }
 
