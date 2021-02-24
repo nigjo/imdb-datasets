@@ -279,16 +279,12 @@ class Details extends PageContent {
                        display:inline-flex;min-width:10em;}
       .moviedetails dt:after{content:'';border-bottom:1px dotted gray;
                              flex-grow:1;min-width:1em;margin:0 .5em;}
-      .imagePreview {position:fixed;
-                     top:0;left:0;width:100vw;height:100vh;
-                     margin:0;padding:0;box-sizing:border-box;
-                     background-color:rgba(0,0,0,.5);
-      }
+      .imagePreview {position:fixed;top:0;left:0;width:100vw;height:100vh;
+        margin:0;padding:0;box-sizing:border-box;background-color:rgba(0,0,0,.5);}
       .imagePreview form>*{display:block;margin-left:auto;margin-right:auto;}
-      .imagePreview img {
-        height:70vh;max-width:60vw;
-        margin-top:10vh;border: 2px solid yellow;
-      }
+      .imagePreview img{height:70vh;max-width:60vw;
+        margin-top:10vh;border: 2px solid yellow;}
+      .stand{font-family:monospace;color:gray;}
     </style>
     <script>
       var posterBlob = null;
@@ -397,6 +393,7 @@ class Details extends PageContent {
     ?>
     <li><a href="?<?php echo buildQuery();?>">Übersicht</a></li>
     <li><a target="imdb" href="https://www.imdb.com/title/<?php echo $this->firstmovie->basics->tconst; ?>/">IMDB Seite</a></li>
+    <li><a target="ofdb" href="https://ssl.ofdb.de/view.php?page=suchergebnis&Kat=IMDb&SText=<?php echo $this->firstmovie->basics->tconst; ?>">OFDb Seite</a></li>
     <?php
   }
 
@@ -404,6 +401,7 @@ class Details extends PageContent {
     global $file;
     $firstmovie = $this->firstmovie;
     ?>
+    <div class="stand">Stand: <?php echo $firstmovie->timestamp; ?></div>
     <div>
       <?php
       $imgsrc = $file . '.jpg';
