@@ -404,10 +404,10 @@ class Details extends PageContent {
     <li><a href="?<?php echo buildQuery();?>">Übersicht</a></li>
     <li><a target="imdb" href="https://www.imdb.com/title/<?php echo $this->firstmovie->basics->tconst; ?>/">IMDB Seite</a></li>
     <li><a target="ofdb" href="https://ssl.ofdb.de/view.php?page=suchergebnis&Kat=IMDb&SText=<?php echo $this->firstmovie->basics->tconst; ?>">OFDb Seite</a></li>
-    <li><a href="?<?php echo buildQuery([
-            'title' => $this->firstmovie->basics->tconst,
-            'file' => $file
-        ]); ?>">Datenupdate</a></li>
+    <li><a href="?<?php echo buildQuery(['file' => $file,
+            'title' => $this->firstmovie->basics->tconst]); ?>">Datenupdate</a></li>
+    <li><a href="?<?php echo buildQuery(['file' => $file,
+            'action' => 'play']); ?>">abspielen</a></li>
     <?php
   }
 
@@ -871,6 +871,19 @@ class PageError extends PageContent {
   }
 }
 
+function showMovieLocally($file) {
+  $ext = filter_input(INPUT_GET, 'ext');
+  $moviefile=getFolderPath().'\\'.$file.'.'.($ext?$ext:'mp4');
+  error_log('starting '.$moviefile,4);
+  switch(PHP_OS_FAMILY){
+    case 'Windows':
+      system('cmd.exe /C start "movie" "'.$moviefile.'"');
+      break;
+    default:
+      exec($moviefile);
+  }
+}
+
 if (false === serveStaticFiles()) {
   return false;
 }
@@ -907,7 +920,14 @@ if (empty($q)) {
   $page = new Overview();
 } else if (!empty($file)) {
 //----- ----- ----- -----  D E T A I L S  ----- ----- ----- -----
-  $page = new Details();
+  switch(filter_input(INPUT_GET, 'action')){
+    case 'play':
+      Header('Location: ?'.buildQuery(['file'=>$file]), 307);
+      showMovieLocally($file);
+      break;
+    default:
+      $page = new Details();    
+  }
 } else if (!empty($title)) {
 //----- ----- ----- -----  S U C H E  ----- ----- ----- -----
   $page = new Search();
