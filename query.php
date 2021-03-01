@@ -76,7 +76,7 @@ function queryInTitleDb($db, $q){
     while(false!=($row=$res->fetchArray(SQLITE3_ASSOC))){
       trigger_error('found "'.$row['primaryTitle'].'" ('.$row['startYear'].')');
       $knownTitles[]=$row['tconst'];
-      if($GLOBALS['doTitlesOnly']===true){
+      if(array_key_exists('doTitlesOnly', $GLOBALS) && $GLOBALS['doTitlesOnly']===true){
         $moviedata = [
           'tconst'=>$row['tconst'],
           'primaryTitle'=>$row['primaryTitle'],
@@ -163,6 +163,7 @@ QUERY;
 
 function findMovieInfos($db, &$moviedata){
   $titleId = $moviedata['basics']['tconst'];
+  $knownCrewMembers=array();
   
   // ----- Ratings ----- ----- ----- ----- -----
   trigger_error(' - Ratings');
@@ -188,12 +189,14 @@ QUERY;
       $moviedata['directors']=array();
       foreach(explode(',',$row['directors']) as $personId){
         $moviedata['directors'][]=getPersondata($db, $personId);
+        $knownCrewMembers[$personId] = true;
       }
     }
     if($row['writers']!=='\N'){
       $moviedata['writers']=array();
       foreach(explode(',',$row['writers']) as $personId){
         $moviedata['writers'][]=getPersondata($db, $personId);
+        $knownCrewMembers[$personId] = true;
       }
     }
   }
@@ -214,6 +217,7 @@ QUERY;
         $crew[$row['category']]=array();
       }
       $crew[$row['category']][] = $row;
+      $knownCrewMembers[$row['nconst']] = true;
     }
     // foreach(explode(',',$row['writers']) as $personId){
       // $crew[]=getPersondata($db, $personId);
@@ -239,6 +243,30 @@ QUERY;
       $moviedata['aka'][]=$row;
     }
     trigger_error('   - found '.count($moviedata['aka']).' aka entries');
+  }
+  
+  // ----- Additional Crew ----- ----- ----- ----- -----
+  trigger_error(' - Additional Crew');
+  $q = <<<QUERY
+    SELECT nconst, primaryName, birthYear, primaryProfession
+      FROM name_basics
+      WHERE
+        knownForTitles LIKE '%$titleId%'
+      ORDER BY primaryProfession
+QUERY;
+  $res = $db->query($q);
+  if($res!==false){
+    $moviedata['knownForCrew']=array();
+    while(false!=($row=$res->fetchArray(SQLITE3_ASSOC)))
+    {
+      if(!array_key_exists($row['nconst'], $knownCrewMembers)){
+        $cat = explode(',',$row['primaryProfession'])[0];
+        if(!array_key_exists($cat, $moviedata['knownForCrew'])){
+          $moviedata['knownForCrew'][$cat] = array();
+        }
+        $moviedata['knownForCrew'][$cat][] = $row;
+      }
+    }
   }
 }
 
