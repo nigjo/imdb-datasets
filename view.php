@@ -158,6 +158,10 @@ class PageContent {
     ?><h1>Lokale IMDB Datenbank</h1><?php
   }
 
+  function getNavigationCaption() {
+    return false;
+  }
+
   function writeNavigationItems() {
     
   }
@@ -176,6 +180,9 @@ class Overview extends PageContent {
     ?></h1><?php
   }
 
+  function getNavigationCaption(){
+    return 'Listen';
+  }
   function writeNavigationItems(){
     ?>
       <li><a href="view.php?<?php echo buildQuery(['list'=>'acting']);?>">Schauspieler*innen</a></li>
@@ -183,7 +190,7 @@ class Overview extends PageContent {
       <li><a href="view.php?<?php echo buildQuery(['list'=>'producing']);?>">Produzent*innen</a></li>
       <li><a href="view.php?<?php echo buildQuery(['list'=>'composing']);?>">Komponist*innen</a></li>
       <li><a href="view.php?<?php echo buildQuery(['list'=>'genre']);?>">Genre</a></li>
-    </ul><ul>
+    </ul><ul data-caption="Navigation">
     <?php
       $folder = getFolderPath();
       $withParent = getRelativePath('.')!=='./.';
@@ -398,12 +405,18 @@ class Details extends PageContent {
     $this->title = $title;
   }
 
+  function getNavigationCaption() {
+    return 'Navigation';
+  }
+
   function writeNavigationItems() {
     global $file;
     ?>
     <li><a href="?<?php echo buildQuery();?>">Übersicht</a></li>
+    </ul><ul data-caption="Infos">
     <li><a target="imdb" href="https://www.imdb.com/title/<?php echo $this->firstmovie->basics->tconst; ?>/">IMDB Seite</a></li>
     <li><a target="ofdb" href="https://ssl.ofdb.de/view.php?page=suchergebnis&Kat=IMDb&SText=<?php echo $this->firstmovie->basics->tconst; ?>">OFDb Seite</a></li>
+    </ul><ul data-caption="Funktionen">
     <li><a href="?<?php echo buildQuery(['file' => $file,
             'title' => $this->firstmovie->basics->tconst]); ?>">Datenupdate</a></li>
     <li><a href="?<?php echo buildQuery(['file' => $file,
@@ -691,6 +704,9 @@ class ViewLists extends PageContent {
   function writeHeadContent(){
     ?><h1>Filmliste - <?php echo $this->listname; ?></h1><?php
   }
+  function getNavigationCaption() {
+    return 'Navigation';
+  }
   function writeNavigationItems(){
     ?>
       <li><a href="view.php?<?php echo buildQuery([]);?>">Übersicht</a></li>
@@ -948,6 +964,7 @@ function writeCommonCSS() {
   <style>
     body{font-family:Segoe UI,sans-serif;}
     footer{margin-top:1rem;border-top:1px solid gray;}
+    nav{display:flex;}
     a{color:inherit;}
     :root{--poster:url(view.jpg);}
     .movies a::before {
@@ -973,7 +990,14 @@ function writeCommonCSS() {
     .movies .missing{color:darksalmon;}
     footer>div{display:inline;}
     footer>div:not(:first-child)::before{content:'-';}
-  </style>
+nav ul::before {
+	content: 'Menü';
+	font-size: 1.5em;
+	margin-left: -.75em;
+	font-weight: bold;
+}nav ul[data-caption]::before {
+	content: attr(data-caption);
+}  </style>
   <?php
 }
 ?>
@@ -988,7 +1012,7 @@ function writeCommonCSS() {
       <?php $page->writeHeadContent(); ?>
     </header>
     <nav>
-      <ul>
+      <ul<?php $cap=$page->getNavigationCaption();echo empty($cap)?'':(" data-caption='$cap'");?>>
         <?php $page->writeNavigationItems(); ?>
       </ul>
     </nav>
