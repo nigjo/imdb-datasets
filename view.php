@@ -173,6 +173,16 @@ class PageContent {
 }
 
 class Overview extends PageContent {
+  
+  var $knownMovieExtensions=[
+    'avi'=>'AVI',
+    'mp4'=>'MPEG-4',
+    'mov'=>'Quicktime',
+    'wmv'=>'Windows Media Video',
+    'mkv'=>'Matroska',
+    'webm'=>'WebM',
+    'ogv'=>'Ogg Video'
+  ];
 
   function writeHeadContent() {
     ?><h1>Übersicht - <?php
@@ -195,6 +205,7 @@ class Overview extends PageContent {
       $folder = getFolderPath();
       $withParent = getRelativePath('.')!=='./.';
       $dir = opendir($folder);
+      $extensions=array();
       while (false !== ($file = readdir($dir))) {
         if(is_dir($folder.'/'.$file)){
           if($withParent&&$file==='..'){
@@ -206,6 +217,26 @@ class Overview extends PageContent {
               echo buildQuery(['path'=>getRelativePath($file)]);
             ?>"><?php echo $file;?></a></li><?php
           }
+        }else{
+          $fext=pathinfo($file, PATHINFO_EXTENSION);
+          if(array_key_exists($fext,$this->knownMovieExtensions)){
+            $extensions[$fext]=$this->knownMovieExtensions[$fext];
+          }
+        }
+      }
+      
+      if(!empty($extensions)){
+        $current = filter_input(INPUT_GET, 'ext');
+        if(empty($current))
+          $current = 'mp4';
+    ?>
+    </ul><ul data-caption="Dateitypen">
+    <?php
+        foreach($extensions as $ext=>$desc){
+          if($ext===$current)
+            echo '<li>'.$desc.'</li>';
+          else
+            echo '<li><a href="?'.buildQuery(['ext'=>$ext]).'">'.$desc.'</a></li>';
         }
       }
   }
