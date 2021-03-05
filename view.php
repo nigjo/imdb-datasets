@@ -284,7 +284,9 @@ class Details extends PageContent {
       .poster{max-height:10em;float: left;margin: 0 .5em .5em 0;}
       h2{clear:left;}
       .character{color:gray;}
-      .crew{display:inline-block;margin:0;padding:0}
+      .crewgroup{display:inline-flex;flex-direction:column;}
+      .crew{display:inline-block;margin:0;padding:0;}
+      .crew.extras{column-count:3;}
       .crew li{display:flex;text-align:right;}
       .crew li .character::before{content:'';flex-grow:1;border-bottom:1px dotted gray;
                                   min-width:1em;margin:0 .5em;box-sizing:border-box;}
@@ -523,7 +525,7 @@ class Details extends PageContent {
       </div>
       <div>
         <h2>weitere Mitarbeiter</h2>
-        <div>
+        <div class="crewgroup">
           <ul class="crew">
             <?php
             $crew = [];
@@ -547,6 +549,23 @@ class Details extends PageContent {
               }
               echo '</span>';
               echo '</li>';
+            }
+            
+            if(!empty($firstmovie->knownForCrew)){
+            ?>
+          </ul>
+          <ul class="extras crew">
+            <?php
+              foreach($firstmovie->knownForCrew as $cat=>$persons) {
+                foreach($persons as $person) {
+                  echo '<li>';
+                  echo $person->primaryName;
+                  echo ' <span class="character">';
+                  echo $cat;
+                  echo '</span>';
+                  echo '</li>';
+                }
+              }
             }
             ?>
           </ul>
