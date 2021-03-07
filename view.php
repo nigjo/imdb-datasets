@@ -503,6 +503,9 @@ class Details extends PageContent {
           <dt>Drehbuch</dt>
           <dd>
             <?php
+            if(empty($firstmovie->writers)){
+              echo '-';
+            }else
             foreach ($firstmovie->writers as $writer) {
               if ($writer !== $firstmovie->writers[0]) {
                 echo ', ';
