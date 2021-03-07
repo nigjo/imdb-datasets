@@ -453,6 +453,8 @@ class Details extends PageContent {
     <li><a href="?<?php echo buildQuery(['file' => $file,
             'title' => $this->firstmovie->basics->tconst]); ?>">Datenupdate</a></li>
     <li><a href="?<?php echo buildQuery(['file' => $file,
+            'action' => 'json']); ?>">Rohdaten</a></li>
+    <li><a href="?<?php echo buildQuery(['file' => $file,
             'action' => 'play']); ?>">abspielen</a></li>
     <?php
   }
@@ -990,6 +992,17 @@ if (empty($q)) {
 } else if (!empty($file)) {
 //----- ----- ----- -----  D E T A I L S  ----- ----- ----- -----
   switch(filter_input(INPUT_GET, 'action')){
+    case 'json':
+      Header('Content-Type: application/json');
+      $jsonFile=getFolderPath().'/'.$file.'.json';
+      if(file_exists($jsonFile)){
+        header('Content-Disposition: inline; filename="'.$file.'.json"');
+        readfile($jsonFile);
+      }else{
+        http_response_code(404);
+        echo '{"message":"not found"}';
+      }
+      return;
     case 'play':
       Header('Location: ?'.buildQuery(['file'=>$file]), 307);
       showMovieLocally($file);
