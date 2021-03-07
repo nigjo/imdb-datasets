@@ -10,13 +10,37 @@ function serveStaticFiles() {
       echo file_get_contents(basename($request));
       return;
     }
-    if (basename($request) === 'favicon.ico') {
-      logRequest();
-      echo file_get_contents('view.ico');
-      return;
+    switch(basename($request)){
+      case 'GitHub-Mark-32px.png':
+        logRequest();
+        printMark();
+        return;
+      case 'favicon.ico':
+        logRequest();
+        echo file_get_contents('view.ico');
+        return;
     }
     return false;
   }
+}
+function printMark(){
+  //GitHub-Mark-32px.png
+  $githubMark = <<<GitHubMark
+iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAMAAABEpIrGAAAAe1BMVEUAAAAXFRYXFRYXFRYXFRYX
+FRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYX
+FRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRYXFRZfQn0AAAAA
+KHRSTlMAEPIFFvxjMd2uqvbr0jXh23NfH9bCnplaPMa4jUPQpH55Z2UoDQxog76o6AAAAUdJREFU
+OMuNUluCgyAMDGJpRbQ+q9bad7vc/4QLibqCfuz8EJLJBJLAH0JxSwKtg+QmQlhjL3d6xk7uvTBr
+tIeGOekHvcJhITIEegPBMOdTfM0YNZjVr6LAiUWVrULvOFlPC1wo88W6Nl9VgkNrvScbTzHFqrE3
+IN7M1kV3aqxotDxQXgQQUn8Kn1BQx0J4onFkPoEdMfAEiaeAFQQGJFSoxNYEhrUriLECbABrxIBC
+2RaB5kOEYItArR2PjQ0Jx9Sr2wa/EVeahE64H+eJpmm0GnHxCRfyt/CJyZKh8wBJ3vgD0Jj0rraL
++ko5inc/0bTAjbmXRiLnZ5odItIT4tLe73bape1bR4RuJtzxbrN7YOIx8LkDhPPkOJgiyzFNiz+/
+u8y0rvPiwR1CVi5yenSxJaFn7nool6Be4OGbZ2oswVWWf+G/+AUSBz+2FOLP3QAAAABJRU5ErkJg
+gg==
+GitHubMark;
+  header('Content-Type: image/png');
+  echo base64_decode($githubMark);
+  return;
 }
 
 function getFolderPath($relative=false, $subpath=false){
