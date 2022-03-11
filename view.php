@@ -275,8 +275,10 @@ class Overview extends PageContent {
       <ul class="movies">
         <?php
         $dir = opendir(getFolderPath());
+        $imgcount=0;
         while (false !== ($file = readdir($dir))) {
-          Overview::writeListItem(getFolderPath(), $file);
+          if(Overview::writeListItem(getFolderPath(), $file, $imgcount>=25))
+            ++$imgcount;
         }
         ?>
       </ul>
@@ -284,13 +286,16 @@ class Overview extends PageContent {
     <?php
   }
 
-  static function writeListItem($rootdir, $file){
+  static function writeListItem($rootdir, $file, $lazy=false){
     $ext = filter_input(INPUT_GET, 'ext');
     $base = basename($file, '.'.($ext?$ext:'mp4'));
     if ($base !== $file) {
       echo '<li';
       if (file_exists($rootdir . '/' . $base . '.jpg')) {
         $imgfile = getRelativePath($base. '.jpg');
+        if($lazy) {
+          echo ' class="lazy"';
+        }
         echo ' style="--poster: url(\'' . 
             str_replace('\'', '\\\'', $imgfile) . '\')"';
       }
@@ -305,6 +310,7 @@ class Overview extends PageContent {
         echo '</a>';
       }
       echo '</li>';
+      return true;
     }
   }
 
@@ -472,7 +478,7 @@ class Details extends PageContent {
     <li><a href="?<?php echo buildQuery();?>">Übersicht</a></li>
     </ul><ul data-caption="Infos">
     <li><a target="imdb" href="https://www.imdb.com/title/<?php echo $this->firstmovie->basics->tconst; ?>/">IMDB Seite</a></li>
-    <li><a target="ofdb" href="https://ssl.ofdb.de/view.php?page=suchergebnis&Kat=IMDb&SText=<?php echo $this->firstmovie->basics->tconst; ?>">OFDb Seite</a></li>
+    <li><a target="ofdb" href="https://www.ofdb.de/view.php?page=suchergebnis&Kat=IMDb&SText=<?php echo $this->firstmovie->basics->tconst; ?>">OFDb Seite</a></li>
     </ul><ul data-caption="Funktionen">
     <li><a href="?<?php echo buildQuery(['file' => $file,
             'title' => $this->firstmovie->basics->tconst]); ?>">Datenupdate</a></li>
