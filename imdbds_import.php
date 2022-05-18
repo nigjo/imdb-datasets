@@ -5,6 +5,27 @@ if(file_exists($dbfile)){
   unlink($dbfile);
 }
 
+/**
+ * get the filesize of the uncompressed file.
+ * Source: http://p.lvesu.com/blog/php/function.gzread.php#110078
+ * Hint: Die letzten 4 Byte der .gz ist die unkomprimierte Dateigroesse.
+ */
+function gzfilesize($filename) {
+  $gzfs = FALSE;
+  if(($zp = fopen($filename, 'r'))!==FALSE) {
+    if(@fread($zp, 2) == "\x1F\x8B") { // this is a gzip'd file
+      fseek($zp, -4, SEEK_END);
+      if(strlen($datum = @fread($zp, 4))==4)
+        extract(unpack('Vgzfs', $datum));
+    }
+    else // not a gzip'd file, revert to regular filesize function
+      $gzfs = filesize($filename);
+    fclose($zp);
+  }
+  return($gzfs);
+}
+
+/** @deprecate works only for uncompressed files <2GB */
 function gzend($fh){
   $d   = 1<<10;
   $eof = 0;
@@ -38,7 +59,7 @@ function loadDataset($db, $filepath){
   $progress = 0;
   $in = gzopen($filepath, "r");
   echo 'preparing file...'."\r";
-  $filesize = gzend($in);
+  $filesize = gzfilesize($filepath);
   $progressdelta = 1000;
   $tablename = str_replace('.','_',basename($filepath, '.tsv.gz'));
   $db->exec('BEGIN TRANSACTION');
