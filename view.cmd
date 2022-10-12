@@ -8,10 +8,10 @@ if defined subpath set "subpath=%subpath: =+%"
 if defined subpath set "subpath=?path=%subpath%"
 
 path %PATH%;c:\Compiler\php
-set /a port=%RANDOM% + 33000
-start "" firefox.exe "http://localhost:%PORT%/%subpath%"
+if not defined port set /a port=%RANDOM% + 33000
+if not defined batch start "" firefox.exe "http://localhost:%PORT%/%subpath%"
 echo php -c . -S localhost:%port% -t "%root%" %~n0.php
-(
+if not defined batch (
 echo [InternetShortcut]
 echo url=http://localhost:%port%/
 )>"%~dpn0.url"
