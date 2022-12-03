@@ -1,4 +1,13 @@
 <?php
+const FSK_RATINGS = [
+    -2 => 'nicht abgefragt',
+    -1 => 'veraltet',
+    0 => 'Ohne Altersbeschränkung',
+    6 => 'Frei ab 6 Jahren',
+    12 => 'Frei ab 12 Jahren',
+    16 => 'Frei ab 16 Jahren',
+    18 => 'Nicht freigegeben'
+];
 
 function serveStaticFiles() {
   $request = filter_input(INPUT_SERVER, 'REQUEST_URI');
@@ -48,7 +57,7 @@ function getFolderPath($relative = false, $subpath = false) {
   $root = realpath(filter_input(INPUT_SERVER, 'DOCUMENT_ROOT'));
   //echo 'R:"'.$root.'"'.PHP_EOL;
   $parampath = filter_input(INPUT_GET, 'path');
-  $path = realpath($parampath);
+  $path = realpath($parampath?$parampath:'.');
   if ($path === false) {
     $path = realpath($root . '/' . $parampath . ($subpath ? ('/' . $subpath) : ''));
   }
@@ -122,8 +131,22 @@ function saveJsonData($rootdir, $file, $title) {
   if (file_exists($outfile)) {
     $oldcontent = file_get_contents($outfile);
     $olddata = json_decode($oldcontent);
-    array_unshift($olddata, $data[0]);
-    $data = $olddata;
+    if (array_key_exists(0, $olddata)) {
+      // version=1
+      array_unshift($olddata, $data[0]);
+      $version2 = [
+          version => 2,
+          ratings => [
+              fsk => -1
+          ],
+          imdb => $olddata
+      ];
+      $data = $version2;
+    } else {
+      // version=2
+      array_unshift($olddata->imdb, $data[0]);
+      $data = $olddata;
+    }
   }
 
   $output = preg_replace_callback('/^ +/m', function ($m) {
@@ -138,7 +161,7 @@ function saveJsonData($rootdir, $file, $title) {
 
 function queryData($argv, $doflush = true) {
   array_unshift($argv, 'query.php');
-  set_error_handler(function ($n, $m) {
+  $handler = function ($n, $m) use ($doflush){
     if ($n === 1024) {
       $oldcontent = ob_get_clean();
       echo '<div class="logitem">' . $m . '</div>' . PHP_EOL;
@@ -148,7 +171,8 @@ function queryData($argv, $doflush = true) {
       ob_start();
       echo $oldcontent;
     }
-  });
+  };
+  set_error_handler($handler);
   ob_start();
   try {
     if (function_exists('queryDatabase')) {
@@ -209,16 +233,16 @@ class Overview extends PageContent {
 
   function writeHeadContent() {
     ?><h1>Übersicht - <?php
-      echo basename(getFolderPath());
-      ?></h1><?php
-  }
+    echo basename(getFolderPath());
+    ?></h1><?php
+    }
 
-  function getNavigationCaption() {
-    return 'Listen';
-  }
+    function getNavigationCaption() {
+      return 'Listen';
+    }
 
-  function writeNavigationItems() {
-    ?>
+    function writeNavigationItems() {
+      ?>
     <li><a href="view.php?<?php echo buildQuery(['list' => 'acting']); ?>">Schauspieler*innen</a></li>
     <li><a href="view.php?<?php echo buildQuery(['list' => 'directing']); ?>">Regiseur*innen</a></li>
     <li><a href="view.php?<?php echo buildQuery(['list' => 'producing']); ?>">Produzent*innen</a></li>
@@ -234,27 +258,27 @@ class Overview extends PageContent {
         if (is_dir($folder . '/' . $file)) {
           if ($withParent && $file === '..') {
             ?><li><a href="?<?php
+            echo buildQuery(['path' => getRelativePath($file)]);
+            ?>"><?php echo $file . '#' . getFolderPath(true, '..'); ?></a></li><?php
+                 } else if ($file[0] !== '.') {
+                   ?><li><a href="?<?php
               echo buildQuery(['path' => getRelativePath($file)]);
-              ?>"><?php echo $file . '#' . getFolderPath(true, '..'); ?></a></li><?php
-            } else if ($file[0] !== '.') {
-              ?><li><a href="?<?php
-                echo buildQuery(['path' => getRelativePath($file)]);
-                ?>"><?php echo $file; ?></a></li><?php
-            }
-          } else {
-            $fext = pathinfo($file, PATHINFO_EXTENSION);
-            if (array_key_exists($fext, $this->knownMovieExtensions)) {
-              $extensions[$fext] = $this->knownMovieExtensions[$fext];
+              ?>"><?php echo $file; ?></a></li><?php
+              }
+            } else {
+              $fext = pathinfo($file, PATHINFO_EXTENSION);
+              if (array_key_exists($fext, $this->knownMovieExtensions)) {
+                $extensions[$fext] = $this->knownMovieExtensions[$fext];
+              }
             }
           }
-        }
 
-        if (!empty($extensions)) {
-          $current = filter_input(INPUT_GET, 'ext');
-          if (empty($current)) {
-            $current = 'mp4';
-          }
-          ?>
+          if (!empty($extensions)) {
+            $current = filter_input(INPUT_GET, 'ext');
+            if (empty($current)) {
+              $current = 'mp4';
+            }
+            ?>
       </ul><ul data-caption="Dateitypen">
         <?php
         foreach ($extensions as $ext => $desc) {
@@ -497,7 +521,15 @@ class Overview extends PageContent {
       global $file;
       $data = json_decode(file_get_contents(
                       getFolderPath() . '/' . $file . '.json'));
-      $this->firstmovie = $data[0];
+      if (is_array($data)) {
+        error_log("data version 1", 4);
+        $this->firstmovie = $data[0];
+        $this->fsk = -2;
+      } else {
+        error_log("data version 2", 4);
+        $this->firstmovie = $data->imdb[0];
+        $this->fsk = $data->ratings->fsk;
+      }
 
       $title = $this->firstmovie->basics->primaryTitle;
       $deFound = false;
@@ -552,18 +584,18 @@ class Overview extends PageContent {
       <li><a target="ofdb" href="https://www.ofdb.de/view.php?page=suchergebnis&Kat=IMDb&SText=<?php echo $this->firstmovie->basics->tconst; ?>">OFDb Seite</a></li>
     </ul><ul data-caption="Funktionen">
       <li><a href="?<?php
-        echo buildQuery(['file' => $file,
-            'title' => $this->firstmovie->basics->tconst]);
-        ?>">Datenupdate</a></li>
+    echo buildQuery(['file' => $file,
+        'title' => $this->firstmovie->basics->tconst]);
+      ?>">Datenupdate</a></li>
       <li><a href="?<?php
-        echo buildQuery(['file' => $file,
-            'action' => 'json']);
-        ?>">Rohdaten</a></li>
+    echo buildQuery(['file' => $file,
+        'action' => 'json']);
+      ?>">Rohdaten</a></li>
       <li><a href="?<?php
-        echo buildQuery(['file' => $file,
-            'action' => 'play']);
-        ?>">abspielen</a></li>
-        <?php
+    echo buildQuery(['file' => $file,
+        'action' => 'play']);
+      ?>">abspielen</a></li>
+             <?php
       }
 
       function writeMainContent() {
@@ -636,6 +668,8 @@ class Overview extends PageContent {
               }
               ?>
             </dd>
+            <dt>FSK</dt>
+            <dd><?php echo FSK_RATINGS[$this->fsk] ?></dd>
           </dl></div>
 
         <div>
@@ -644,12 +678,12 @@ class Overview extends PageContent {
             <ul class="crew">
               <?php
               $actorsAndActress = [];
-              if ($firstmovie->crew->actor) {
+              if (property_exists($firstmovie->crew, 'actor')) {
                 foreach ($firstmovie->crew->actor as $person) {
                   $actorsAndActress[intval($person->ordering)] = $person;
                 }
               }
-              if ($firstmovie->crew->actress) {
+              if (property_exists($firstmovie->crew,'actress')) {
                 foreach ($firstmovie->crew->actress as $person) {
                   $actorsAndActress[intval($person->ordering)] = $person;
                 }
@@ -882,10 +916,10 @@ class Overview extends PageContent {
             ?><div id="autosearchtimeout" style="--progress:0%" data-progress=""></div><?php
           } else {
             ?><div><a target="imdb" href="https://www.imdb.com/find?<?php
-              echo http_build_query(['q' => $query]);
-              ?>">IMDB durchsuchen</a></div><?php
-            }
-            ?>
+            echo http_build_query(['q' => $query]);
+            ?>">IMDB durchsuchen</a></div><?php
+                  }
+                  ?>
         </form>
       </div>
       <?php
@@ -917,7 +951,7 @@ class Overview extends PageContent {
 
     function getItems(&$data, $path) {
       //echo ($data===null).'~'.$path[0].'<br>';
-      if (!empty($data) && property_exists($data, $path[0])) {
+      if (is_object($data) && property_exists($data, $path[0])) {
         $prop = $path[0];
         if (count($path) > 1) {
           return $this->getItems($data->$prop, array_slice($path, 1));
@@ -941,6 +975,9 @@ class Overview extends PageContent {
           foreach ($data as $entry) {
             $result[$entry->basics->tconst]['file'] = $base;
             //$result[$entry->basics->tconst]['basics']=$entry->basics;
+            if(is_object($entry) && property_exists($entry, 'imdb')){
+              $entry = $entry->imdb;
+            }
             foreach ($filters as $filter) {
               $items = $this->getItems($entry, explode('/', $filter));
               // echo $entry->basics->tconst.' '.$filter.': '
@@ -1007,90 +1044,90 @@ class Overview extends PageContent {
           }
         }
       </script><?php
+  }
+
+  function writeMainContent() {
+    $methodname = 'writeList' . $this->listname;
+    if (method_exists($this, $methodname)) {
+      call_user_func([$this, $methodname]);
+    } else {
+      $error = new PageError();
+      $error->writeMainContent();
     }
+  }
 
-    function writeMainContent() {
-      $methodname = 'writeList' . $this->listname;
-      if (method_exists($this, $methodname)) {
-        call_user_func([$this, $methodname]);
-      } else {
-        $error = new PageError();
-        $error->writeMainContent();
-      }
-    }
+  function writeListacting() {
+    $this->writePersonsList("crew/actor", "crew/actress");
+  }
 
-    function writeListacting() {
-      $this->writePersonsList("crew/actor", "crew/actress");
-    }
+  function writeListdirecting() {
+    $this->writePersonsList("crew/director");
+  }
 
-    function writeListdirecting() {
-      $this->writePersonsList("crew/director");
-    }
+  function writeListproducing() {
+    $this->writePersonsList("crew/producer");
+  }
 
-    function writeListproducing() {
-      $this->writePersonsList("crew/producer");
-    }
+  function writeListcomposing() {
+    $this->writePersonsList("crew/composer");
+  }
 
-    function writeListcomposing() {
-      $this->writePersonsList("crew/composer");
-    }
+  function writePersonsList(...$filters) {
+    $entries = $this->scanFolderWithFilter(...$filters);
 
-    function writePersonsList(...$filters) {
-      $entries = $this->scanFolderWithFilter(...$filters);
-
-      $persons = array();
-      foreach ($entries as $entry) {
-        $file = $entry['file'];
-        foreach ($entry as $filter) {
-          if (gettype($filter) === 'array') {
-            foreach ($filter as $person) {
-              $persons[$person->primaryName][] = $file;
-            }
+    $persons = array();
+    foreach ($entries as $entry) {
+      $file = $entry['file'];
+      foreach ($entry as $filter) {
+        if (gettype($filter) === 'array') {
+          foreach ($filter as $person) {
+            $persons[$person->primaryName][] = $file;
           }
         }
       }
-
-      uksort($persons, function ($a, $b) {
-        $na = array_pop(explode(' ', $a));
-        $nb = array_pop(explode(' ', $b));
-        return strcasecmp($na, $nb);
-      });
-      $this->writeContent($persons);
     }
 
-    function writeListgenre() {
-      echo 'list of genres';
-      $entries = $this->scanFolderWithFilter("basics/genres");
-      $genres = array();
-      foreach ($entries as $entry) {
-        foreach (explode(',', $entry["basics/genres"]) as $genre) {
-          $genres[$genre][] = $entry['file'];
-        }
-      }
-      ksort($genres);
-      $this->writeContent($genres);
-    }
-
-    function writeContent($data) {
-      echo '<dl class="movies" style="--poster:url(view.jpg)">';
-      foreach ($data as $caption => $list) {
-        echo '<dt class="" onclick="toggleView(event);" style="order:';
-        echo (1000 - count($list));
-        echo '">' . $caption . '</dt>';
-        echo '<dd><ul>';
-        foreach ($list as $file) {
-          Overview::writeListItem(getFolderPath(), $file . '.' . ($ext ? $ext : 'mp4'));
-        }
-        echo '</ul></dd>';
-      }
-      echo '</dl>';
-    }
-
+    uksort($persons, function ($a, $b) {
+      $na = array_pop(explode(' ', $a));
+      $nb = array_pop(explode(' ', $b));
+      return strcasecmp($na, $nb);
+    });
+    $this->writeContent($persons);
   }
 
-  class PageError extends PageContent {
+  function writeListgenre() {
+    echo 'list of genres';
+    $entries = $this->scanFolderWithFilter("basics/genres");
+    $genres = array();
+    foreach ($entries as $entry) {
+      foreach (explode(',', $entry["basics/genres"]) as $genre) {
+        $genres[$genre][] = $entry['file'];
+      }
+    }
+    ksort($genres);
+    $this->writeContent($genres);
+  }
 
-    function writeMainContent() {
+  function writeContent($data) {
+    echo '<dl class="movies" style="--poster:url(view.jpg)">';
+    foreach ($data as $caption => $list) {
+      echo '<dt class="" onclick="toggleView(event);" style="order:';
+      echo (1000 - count($list));
+      echo '">' . $caption . '</dt>';
+      echo '<dd><ul>';
+      foreach ($list as $file) {
+        Overview::writeListItem(getFolderPath(), $file . '.' . ($ext ? $ext : 'mp4'));
+      }
+      echo '</ul></dd>';
+    }
+    echo '</dl>';
+  }
+
+}
+
+class PageError extends PageContent {
+
+  function writeMainContent() {
       ?>
       <p>
         Es ist ein Fehler aufgetreten.
@@ -1134,7 +1171,10 @@ class Overview extends PageContent {
   }
 
   $q = array();
-  parse_str(filter_input(INPUT_SERVER, 'QUERY_STRING'), $q);
+  $query=filter_input(INPUT_SERVER, 'QUERY_STRING');
+  if($query) {
+    parse_str($query, $q);
+  }
 //print_r($q);
 
   $file = filter_input(INPUT_GET, 'file');
@@ -1263,7 +1303,7 @@ class Overview extends PageContent {
         $cap = $page->getNavigationCaption();
         echo empty($cap) ? '' : (" data-caption='$cap'");
         ?>>
-            <?php $page->writeNavigationItems(); ?>
+          <?php $page->writeNavigationItems(); ?>
         </ul>
       </nav>
       <main>
