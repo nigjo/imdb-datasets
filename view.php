@@ -1088,9 +1088,9 @@ class Overview extends PageContent {
     }
 
     uksort($persons, function ($a, $b) {
-      $na = array_pop(explode(' ', $a));
-      $nb = array_pop(explode(' ', $b));
-      return strcasecmp($na, $nb);
+      $ea = explode(' ', $a);
+      $eb = explode(' ', $b);
+      return strcasecmp(array_pop($ea), array_pop($eb));
     });
     $this->writeContent($persons);
   }
