@@ -652,7 +652,7 @@ class Overview extends PageContent {
                     echo ', ';
                   }
                   echo $writer->primaryName;
-                  if ($firstmovie->crew->writer) {
+                  if ($firstmovie->crew && !empty($firstmovie->crew->writer)) {
                     foreach ($firstmovie->crew->writer as $person) {
                       if ($person->nconst === $writer->nconst &&
                               strpos($person->job, 'screenplay') === false &&
