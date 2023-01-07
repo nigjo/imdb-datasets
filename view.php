@@ -1109,6 +1109,7 @@ class Overview extends PageContent {
   }
 
   function writeContent($data) {
+    $ext = filter_input(INPUT_GET, 'ext');
     echo '<dl class="movies" style="--poster:url(view.jpg)">';
     foreach ($data as $caption => $list) {
       echo '<dt class="" onclick="toggleView(event);" style="order:';
