@@ -135,11 +135,11 @@ function saveJsonData($rootdir, $file, $title) {
       // version=1
       array_unshift($olddata, $data[0]);
       $version2 = [
-          version => 2,
-          ratings => [
-              fsk => -1
+          'version' => 2,
+          'ratings' => [
+              'fsk' => -1
           ],
-          imdb => $olddata
+          'imdb' => $olddata
       ];
       $data = $version2;
     } else {
