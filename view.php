@@ -86,7 +86,11 @@ function logRequest() {
 function uploadPosterImage() {
   if ($_FILES["posterFile"]["error"] == UPLOAD_ERR_OK) {
 // echo PHP_EOL.'file seems to be OK';
-    $pngfile = imagecreatefrompng($_FILES["posterFile"]["tmp_name"]);
+    echo 'File received as '.print_r($_FILES["posterFile"],true);
+    if($_FILES["posterFile"]["type"] === 'image/jpeg')
+      $pngfile = imagecreatefromjpeg($_FILES["posterFile"]["tmp_name"]);
+    else
+      $pngfile = imagecreatefrompng($_FILES["posterFile"]["tmp_name"]);
     imagejpeg($pngfile,
             getFolderPath()
             . '/' . filter_input(INPUT_POST, 'file') . '.jpg', 80);
@@ -501,7 +505,8 @@ class Overview extends PageContent {
             xhr.addEventListener('load', ok);
             xhr.addEventListener('error', fail);
             const data = new FormData(event.submitter.form);
-            data.append('posterFile', posterBlob, 'poster.png');
+            let filename = posterBlob.name || 'poster.png';
+            data.append('posterFile', posterBlob, filename);
             xhr.send(data);
           }).then(data => {
             if (data.target.status === 200) {
