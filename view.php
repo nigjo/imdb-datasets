@@ -955,11 +955,12 @@ class Overview extends PageContent {
     $ext = filter_input(INPUT_GET, 'ext');
     echo '<dl class="movies" style="--poster:url(view.jpg)">';
     foreach ($data as $caption => $list) {
+      $realList = array_unique($list);
       echo '<dt class="" onclick="toggleView(event);" style="order:';
-      echo (1000 - count($list));
+      echo (1000 - count($realList));
       echo '">' . $caption . '</dt>';
       echo '<dd><ul>';
-      foreach ($list as $file) {
+      foreach ($realList as $file) {
         Overview::writeListItem(getFolderPath(), $file . '.' . ($ext ? $ext : 'mp4'));
       }
       echo '</ul></dd>';
