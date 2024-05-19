@@ -840,24 +840,29 @@ class Overview extends PageContent {
         if ($base !== $file &&
                 file_exists(getFolderPath() . '/' . $base . '.json')) {
           //echo getFolderPath().'/'.$base.'.json'.'<br>';
-          $data = json_decode(file_get_contents(getFolderPath() . '/' . $base . '.json'));
-          foreach ($data as $entry) {
-            $result[$entry->basics->tconst]['file'] = $base;
-            //$result[$entry->basics->tconst]['basics']=$entry->basics;
-            if(is_object($entry) && property_exists($entry, 'imdb')){
-              $entry = $entry->imdb;
+          $rawdata = json_decode(file_get_contents(getFolderPath() . '/' . $base . '.json'));
+          if (is_array($rawdata)) {
+            //Version 1
+            $entry = $rawdata[0];
+          } else {
+            //Version 2+
+            $entry = $rawdata->imdb[0];
+          }
+          $result[$entry->basics->tconst]['file'] = $base;
+          //$result[$entry->basics->tconst]['basics']=$entry->basics;
+          if (is_object($entry) && property_exists($entry, 'imdb')) {
+            $entry = $entry->imdb;
+          }
+          foreach ($filters as $filter) {
+            $items = $this->getItems($entry, explode('/', $filter));
+            // echo $entry->basics->tconst.' '.$filter.': '
+            // .htmlspecialchars(print_r($items,true)).'<br>';
+            if (!empty($items)) {
+              $result[$entry->basics->tconst][$filter] = $items;
             }
-            foreach ($filters as $filter) {
-              $items = $this->getItems($entry, explode('/', $filter));
-              // echo $entry->basics->tconst.' '.$filter.': '
-              // .htmlspecialchars(print_r($items,true)).'<br>';
-              if (!empty($items)) {
-                $result[$entry->basics->tconst][$filter] = $items;
-              }
-            }
+          }
+          unset($rawdata);
         }
-          unset($data);
-      }
       }
       return $result;
     }
