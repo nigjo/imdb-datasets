@@ -1,0 +1,54 @@
+body{
+  font-family:Segoe UI,sans-serif;
+}
+footer{
+  margin-top:1rem;
+  border-top:1px solid gray;
+}
+nav{
+  display:flex;
+}
+a{
+  color:inherit;
+}
+:root{
+  --poster:url(view.jpg);
+}
+.movies a::before {
+  display: block;
+  content: ' ';
+  background-image: var(--poster);
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  height: 10rem;
+}
+.movies li {
+  display: inline-block;
+  width: 10rem;
+  height: 12rem;
+  font-size: .75em;
+  text-align: center;
+  vertical-align: top;
+  margin: .5em;
+  padding: .5em;
+  background-color: #F0F0F0;
+}
+.movies .missing{
+  color:darksalmon;
+}
+footer>div{
+  display:inline;
+}
+footer>div:not(:first-child)::before{
+  content:'-';
+}
+nav ul::before {
+  content: 'Menü';
+  font-size: 1.5em;
+  margin-left: -.75em;
+  font-weight: bold;
+}
+nav ul[data-caption]::before {
+  content: attr(data-caption);
+}

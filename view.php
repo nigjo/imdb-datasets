@@ -87,10 +87,11 @@ function uploadPosterImage() {
   if ($_FILES["posterFile"]["error"] == UPLOAD_ERR_OK) {
 // echo PHP_EOL.'file seems to be OK';
     echo 'File received as '.print_r($_FILES["posterFile"],true);
-    if($_FILES["posterFile"]["type"] === 'image/jpeg')
+    if ($_FILES["posterFile"]["type"] === 'image/jpeg') {
       $pngfile = imagecreatefromjpeg($_FILES["posterFile"]["tmp_name"]);
-    else
+    } else {
       $pngfile = imagecreatefrompng($_FILES["posterFile"]["tmp_name"]);
+    }
     imagejpeg($pngfile,
             getFolderPath()
             . '/' . filter_input(INPUT_POST, 'file') . '.jpg', 80);
@@ -376,94 +377,7 @@ class Overview extends PageContent {
     function writeHeaderContent() {
       parent::writeHeaderContent();
       ?>
-      <style>
-        .poster{
-          max-height:10em;
-          float: left;
-          margin: 0 .5em .5em 0;
-        }
-        h2{
-          clear:left;
-        }
-        .character{
-          color:gray;
-        }
-        .crewgroup{
-          display:inline-flex;
-          flex-direction:column;
-        }
-        .crew{
-          display:inline-block;
-          margin:0;
-          padding:0;
-        }
-        .crew.extras{
-          column-count:3;
-        }
-        .crew li{
-          display:flex;
-          text-align:right;
-        }
-        .crew li .character::before{
-          content:'';
-          flex-grow:1;
-          border-bottom:1px dotted gray;
-          min-width:1em;
-          margin:0 .5em;
-          box-sizing:border-box;
-        }
-        .crew li .character{
-          display:inline-flex;
-          flex-grow:1;
-        }
-        .moviedetails{
-          flex-wrap: wrap;
-        }
-        .moviedetails dt{
-          float:left;
-          min-width:9em;
-          font-variant:small-caps;
-        }
-        .moviedetails dt{
-          float:left;
-          font-variant:small-caps;
-          display:inline-flex;
-          min-width:10em;
-        }
-        .moviedetails dt:after{
-          content:'';
-          border-bottom:1px dotted gray;
-          flex-grow:1;
-          min-width:1em;
-          margin:0 .5em;
-        }
-        .imagePreview {
-          position:fixed;
-          top:0;
-          left:0;
-          width:100vw;
-          height:100vh;
-          margin:0;
-          padding:0;
-          box-sizing:border-box;
-          background-color:rgba(0,0,0,.5);
-        }
-        .imagePreview form>*{
-          display:block;
-          margin-left:auto;
-          margin-right:auto;
-        }
-        .imagePreview img{
-          height:70vh;
-          max-width:60vw;
-          margin-top:10vh;
-          border: 2px solid yellow;
-        }
-        .stand{
-          font-family:monospace;
-          color:gray;
-        }
-      </style>
+      <style><?php readfile('res/viewDetails.css')?></</style>
       <script>
         var posterBlob = null;
         var posterData = null;
@@ -784,57 +698,7 @@ class Overview extends PageContent {
     function writeHeaderContent() {
       parent::writeHeaderContent();
       ?>
-      <style>
-        .logitem{
-          display:list-item;
-          list-style-type:square;
-          margin-left:1em
-        }
-        .searchlog{
-          max-height:24em;
-          line-height:1.2em;
-          overflow:auto;
-        }
-        .searchresult{
-          max-height:26.4em;
-          line-height:1.2em;
-          overflow:auto;
-        }
-        form{
-          display:inline-block;
-        }
-        #autosearchtimeout:before,#autosearchtimeout:after{
-          white-space:nowrap;
-          width:var(--progress);
-          display:block;
-          position:absolute;
-          height:1rem;
-          font-size:.8rem;
-          line-height:1rem;
-          text-align:center;
-          border-radius:.5rem;
-        }
-        #autosearchtimeout:before{
-          content:'';
-          background-color:green;
-        }
-        #autosearchtimeout:after{
-          content:attr(data-progress);
-          color:white;
-          background:var(--barstyle);
-        }
-        #autosearchtimeout{
-          --barstyle:linear-gradient(180deg, transparent, rgba(255,255,255,.4), transparent, transparent);
-          position:relative;
-          display:block;
-          width:100%;
-          height:1rem;
-          margin:.5rem 0;
-          border-radius:.5rem;
-          background:var(--barstyle);
-          background-color:gray;
-        }
-      </style>
+      <style><?php readfile('res/viewSearch.css')?></</style>
       <script>
         document.addEventListener('DOMContentLoaded', () => {
           const fulltime = 10000;
@@ -991,49 +855,18 @@ class Overview extends PageContent {
                 $result[$entry->basics->tconst][$filter] = $items;
               }
             }
-          }
-          unset($data);
         }
+          unset($data);
+      }
       }
       return $result;
     }
 
     function writeHeaderContent() {
       parent::writeHeaderContent();
-      ?><style>
-        dl{
-          display:flex;
-          flex-wrap:wrap
-        }
-        dt{
-          display:inline-flex;
-          justify-content:center;
-          align-items:center;
-          margin:1px .1em;
-          width:10em;
-          height:3rem;
-          line-height:1rem;
-          font-size:.9rem;
-          text-align:center;
-          border:1px solid blue;
-          box-sizing: border-box;
-        }
-        dt+dd{
-          display:none;
-          order:1;
-        }
-        dt.group{
-          order:-2 !important;
-          flex-basis: 100%;
-          font-size:1.8rem;
-          font-weight:bold;
-        }
-        dt.group+dd{
-          display:block;
-          order:-1 !important;
-          flex-basis: 100%;
-        }
-      </style><script>
+      ?>
+      <style><?php readfile('res/viewLists.css')?></</style>
+      <script>
         lastSelectedGroup = null;
         function toggleView(evt) {
           if (lastSelectedGroup) {
@@ -1235,64 +1068,12 @@ class PageError extends PageContent {
 //phpinfo();
 //return;
   function writeCommonCSS() {
-    ?>
-    <style>
-      body{
-        font-family:Segoe UI,sans-serif;
-      }
-      footer{
-        margin-top:1rem;
-        border-top:1px solid gray;
-      }
-      nav{
-        display:flex;
-      }
-      a{
-        color:inherit;
-      }
-      :root{
-        --poster:url(view.jpg);
-      }
-      .movies a::before {
-        display: block;
-        content: ' ';
-        background-image: var(--poster);
-        background-size: contain;
-        background-position: center;
-        background-repeat: no-repeat;
-        height: 10rem;
-      }
-      .movies li {
-        display: inline-block;
-        width: 10rem;
-        height: 12rem;
-        font-size: .75em;
-        text-align: center;
-        vertical-align: top;
-        margin: .5em;
-        padding: .5em;
-        background-color: #F0F0F0;
-      }
-      .movies .missing{
-        color:darksalmon;
-      }
-      footer>div{
-        display:inline;
-      }
-      footer>div:not(:first-child)::before{
-        content:'-';
-      }
-      nav ul::before {
-        content: 'Menü';
-        font-size: 1.5em;
-        margin-left: -.75em;
-        font-weight: bold;
-      }
-      nav ul[data-caption]::before {
-        content: attr(data-caption);
-      }  </style>
-      <?php
-    }
+    echo '<style>';
+    readfile('res/view.css');
+    echo '</style>';
+  }
+
+//----- ----- ----- -----  P L A I N   H T M L  ----- ----- ----- -----
     ?>
   <!DOCTYPE html>
   <html>
@@ -1319,7 +1100,7 @@ class PageError extends PageContent {
         <div>
           IMDB&reg; Dataset Viewer
         </div><div>
-          &copy; 2021 Jens Hofschröer
+          &copy; 2021-2024 Jens Hofschröer
         </div><div>
           <a href="https://github.com/nigjo/imdb-datasets"
              >View on Github <img alt="Octocat" src="GitHub-Mark-32px.png" style="height:.9em;"

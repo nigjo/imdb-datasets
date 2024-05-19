@@ -1,0 +1,32 @@
+dl{
+  display:flex;
+  flex-wrap:wrap
+}
+dt{
+  display:inline-flex;
+  justify-content:center;
+  align-items:center;
+  margin:1px .1em;
+  width:10em;
+  height:3rem;
+  line-height:1rem;
+  font-size:.9rem;
+  text-align:center;
+  border:1px solid blue;
+  box-sizing: border-box;
+}
+dt+dd{
+  display:none;
+  order:1;
+}
+dt.group{
+  order:-2 !important;
+  flex-basis: 100%;
+  font-size:1.8rem;
+  font-weight:bold;
+}
+dt.group+dd{
+  display:block;
+  order:-1 !important;
+  flex-basis: 100%;
+}
