@@ -15,5 +15,5 @@ if not defined batch (
 echo [InternetShortcut]
 echo url=http://localhost:%port%/
 )>"%~dpn0.url"
-start "PHP Server" /B /MIN php -c . -S localhost:%port% -t "%root%" %~n0.php
+start "PHP Server" /ABOVENORMAL /B /MIN php -c . -S localhost:%port% -t "%root%" %~n0.php
 REM pause >&2
