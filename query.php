@@ -172,12 +172,12 @@ function findMovieInfos($db, &$moviedata) {
   //$titleId = $moviedata['basics']['tconst'];
   //$knownCrewMembers=array();
 
-  findMovieInfosRatings($db, &$moviedata);
-  $writers = findMovieInfosDirectors($db, &$moviedata);
-  $crew = findMovieInfosCast($db, &$moviedata);
-  findMovieInfosAka($db, &$moviedata);
+  findMovieInfosRatings($db, $moviedata);
+  $writers = findMovieInfosDirectors($db, $moviedata);
+  $crew = findMovieInfosCast($db, $moviedata);
+  findMovieInfosAka($db, $moviedata);
   $knownCrewMembers = array_merge($writers, $crew);
-  findMovieInfosCrew($db, &$moviedata, $knownCrewMembers);
+  findMovieInfosCrew($db, $moviedata, $knownCrewMembers);
 }
 
 function findMovieInfosRatings($db, &$moviedata) {
@@ -254,6 +254,8 @@ QUERY;
     // }
     $moviedata['crew'] = $crew;
   }
+
+  return $knownCrewMembers;
 }
 
 function findMovieInfosAka($db, &$moviedata) {
@@ -300,7 +302,7 @@ QUERY;
   if ($res !== false) {
     $moviedata['knownForCrew'] = array();
     while (false != ($row = $res->fetchArray(SQLITE3_ASSOC))) {
-      if (knownCrewMembers != null || !array_key_exists($row['nconst'], $knownCrewMembers)) {
+      if ($knownCrewMembers == null || !array_key_exists($row['nconst'], $knownCrewMembers)) {
         $cat = explode(',', $row['primaryProfession'])[0];
         if (!array_key_exists($cat, $moviedata['knownForCrew'])) {
           $moviedata['knownForCrew'][$cat] = array();
