@@ -307,7 +307,15 @@ class Overview extends PageContent {
           <?php
           $dir = opendir(getFolderPath());
           $imgcount = 0;
+          $files = array();
           while (false !== ($file = readdir($dir))) {
+            if($file[0]==='.')
+              continue;
+            $files[] = $file;
+          }
+          closedir($dir);
+          sort($files);
+          foreach($files as $file){
             if (Overview::writeListItem(getFolderPath(), $file, $imgcount >= 25)) {
               ++$imgcount;
             }
@@ -500,7 +508,7 @@ class Overview extends PageContent {
       <li><a href="?<?php echo buildQuery(); ?>">Übersicht</a></li>
     </ul><ul data-caption="Infos">
       <li><a target="imdb" href="https://www.imdb.com/title/<?php echo $this->firstmovie->basics->tconst; ?>/">IMDB Seite</a></li>
-      <li><a target="ofdb" href="https://www.ofdb.de/view.php?page=suchergebnis&Kat=IMDb&SText=<?php echo $this->firstmovie->basics->tconst; ?>">OFDb Seite</a></li>
+      <li><a target="ofdb" href="https://www.ofdb.de/suchergebnis/?<?php echo $this->firstmovie->basics->tconst; ?>">OFDb Seite</a></li>
     </ul><ul data-caption="Funktionen">
       <li><a href="?<?php
     echo buildQuery(['file' => $file,
@@ -1106,7 +1114,7 @@ class PageError extends PageContent {
         <div>
           IMDB&reg; Dataset Viewer
         </div><div>
-          &copy; 2021-2024 Jens Hofschröer
+          &copy; 2021-2025 Jens Hofschröer
         </div><div>
           <a href="https://github.com/nigjo/imdb-datasets"
              >View on Github <img alt="Octocat" src="GitHub-Mark-32px.png" style="height:.9em;"
