@@ -57,7 +57,7 @@ function getFolderPath($relative = false, $subpath = false) {
   $root = realpath(filter_input(INPUT_SERVER, 'DOCUMENT_ROOT'));
   //echo 'R:"'.$root.'"'.PHP_EOL;
   $parampath = filter_input(INPUT_GET, 'path');
-  $path = realpath($parampath?$parampath:'.');
+  $path = realpath($parampath ? $parampath : '.');
   if ($path === false) {
     $path = realpath($root . '/' . $parampath . ($subpath ? ('/' . $subpath) : ''));
   }
@@ -86,7 +86,7 @@ function logRequest() {
 function uploadPosterImage() {
   if ($_FILES["posterFile"]["error"] == UPLOAD_ERR_OK) {
 // echo PHP_EOL.'file seems to be OK';
-    echo 'File received as '.print_r($_FILES["posterFile"],true);
+    echo 'File received as ' . print_r($_FILES["posterFile"], true);
     if ($_FILES["posterFile"]["type"] === 'image/jpeg') {
       $pngfile = imagecreatefromjpeg($_FILES["posterFile"]["tmp_name"]);
     } else {
@@ -166,7 +166,7 @@ function saveJsonData($rootdir, $file, $title) {
 
 function queryData($argv, $doflush = true) {
   array_unshift($argv, 'query.php');
-  $handler = function ($n, $m) use ($doflush){
+  $handler = function ($n, $m) use ($doflush) {
     if ($n === 1024) {
       $oldcontent = ob_get_clean();
       echo '<div class="logitem">' . $m . '</div>' . PHP_EOL;
@@ -221,7 +221,6 @@ class PageContent {
   function writeMainContent() {
     
   }
-
 }
 
 class Overview extends PageContent {
@@ -309,13 +308,13 @@ class Overview extends PageContent {
           $imgcount = 0;
           $files = array();
           while (false !== ($file = readdir($dir))) {
-            if($file[0]==='.')
+            if ($file[0] === '.')
               continue;
             $files[] = $file;
           }
           closedir($dir);
           sort($files);
-          foreach($files as $file){
+          foreach ($files as $file) {
             if (Overview::writeListItem(getFolderPath(), $file, $imgcount >= 25)) {
               ++$imgcount;
             }
@@ -342,7 +341,7 @@ class Overview extends PageContent {
         echo '>';
         if (file_exists($rootdir . '/' . $base . '.json')) {
           echo '<a href="?' . buildQuery(['file' => $base]) . '">';
-          if(str_contains($base, '[imdbid-')){
+          if (str_contains($base, '[imdbid-')) {
             //echo preg_replace('\s*\[imdb(id)?-tt\d+\]', ''));
             echo preg_replace('/\s*\[imdb(id)?-tt\d+\]/', '', $base);
           } else {
@@ -358,7 +357,6 @@ class Overview extends PageContent {
         return true;
       }
     }
-
   }
 
   function getRelativePath($file) {
@@ -390,7 +388,7 @@ class Overview extends PageContent {
     function writeHeaderContent() {
       parent::writeHeaderContent();
       ?>
-      <style><?php readfile('res/viewDetails.css')?></</style>
+      <style><?php readfile('res/viewDetails.css') ?></</style>
       <script>
         var posterBlob = null;
         var posterData = null;
@@ -446,58 +444,58 @@ class Overview extends PageContent {
           return false;
         }
       </script>
-      <?php
+    <?php
+  }
+
+  function writeHeadContent() {
+    global $file;
+    $data = json_decode(file_get_contents(
+                    getFolderPath() . '/' . $file . '.json'));
+    if (is_array($data)) {
+      error_log("data version 1", 4);
+      $this->firstmovie = $data[0];
+      $this->fsk = -2;
+    } else {
+      error_log("data version 2", 4);
+      $this->firstmovie = $data->imdb[0];
+      $this->fsk = $data->ratings->fsk;
     }
 
-    function writeHeadContent() {
-      global $file;
-      $data = json_decode(file_get_contents(
-                      getFolderPath() . '/' . $file . '.json'));
-      if (is_array($data)) {
-        error_log("data version 1", 4);
-        $this->firstmovie = $data[0];
-        $this->fsk = -2;
-      } else {
-        error_log("data version 2", 4);
-        $this->firstmovie = $data->imdb[0];
-        $this->fsk = $data->ratings->fsk;
-      }
-
-      $title = $this->firstmovie->basics->primaryTitle;
-      $deFound = false;
-      $someFound = false;
-      foreach ($this->firstmovie->aka as $item) {
-        if ($item->region === 'DE') {
-          if ($item->types === 'imdbDisplay') {
-            $title = $item->title;
-            break;
-          }
-          if ($item->types === 'short title' || $item->types === 'promotional title') {
-            if (!$deFound) {
-              $title = $item->title;
-            }
-          } else {
+    $title = $this->firstmovie->basics->primaryTitle;
+    $deFound = false;
+    $someFound = false;
+    foreach ($this->firstmovie->aka as $item) {
+      if ($item->region === 'DE') {
+        if ($item->types === 'imdbDisplay') {
+          $title = $item->title;
+          break;
+        }
+        if ($item->types === 'short title' || $item->types === 'promotional title') {
+          if (!$deFound) {
             $title = $item->title;
           }
-          $deFound = true;
+        } else {
+          $title = $item->title;
+        }
+        $deFound = true;
+        $someFound = true;
+      } else if ($item->region === 'XWG') {
+        if (!$deFound) {
+          $title = $item->title;
           $someFound = true;
-        } else if ($item->region === 'XWG') {
-          if (!$deFound) {
-            $title = $item->title;
-            $someFound = true;
-          }
-        } else if ($item->region === 'AT') {
-          if (!$deFound) {
-            $title = $item->title;
-            $someFound = true;
-          }
-        } else if ($item->region === 'XWW') {
-          if (!$someFound) {
-            $title = $item->title;
-          }
+        }
+      } else if ($item->region === 'AT') {
+        if (!$deFound) {
+          $title = $item->title;
+          $someFound = true;
+        }
+      } else if ($item->region === 'XWW') {
+        if (!$someFound) {
+          $title = $item->title;
         }
       }
-      ?>
+    }
+    ?>
       <h1><?php echo $title ?></h1>
       <?php
       $this->title = $title;
@@ -520,40 +518,40 @@ class Overview extends PageContent {
         'title' => $this->firstmovie->basics->tconst]);
       ?>">Datenupdate</a></li>
       <li><a href="?<?php
-    echo buildQuery(['file' => $file,
-        'action' => 'json']);
-      ?>">Rohdaten</a></li>
+             echo buildQuery(['file' => $file,
+                 'action' => 'json']);
+             ?>">Rohdaten</a></li>
       <li><a href="?<?php
-    echo buildQuery(['file' => $file,
-        'action' => 'play']);
-      ?>">abspielen</a></li>
-             <?php
-      }
+             echo buildQuery(['file' => $file,
+                 'action' => 'play']);
+             ?>">abspielen</a></li>
+        <?php
+           }
 
-      function writeMainContent() {
-        global $file;
-        $firstmovie = $this->firstmovie;
-        ?>
+           function writeMainContent() {
+             global $file;
+             $firstmovie = $this->firstmovie;
+             ?>
       <div class="stand">Stand: <?php echo $firstmovie->timestamp; ?></div>
       <div>
-        <?php
-        $imgsrc = $file . '.jpg';
-        if (file_exists(getFolderPath() . '/' . $imgsrc)) {
-          echo '<img class="poster" alt="poster" src="' . getRelativePath($imgsrc) . '">';
-        } elseif (file_exists(getFolderPath() . '/imdb_' . $imgsrc)) {
-          echo '<img class="poster" alt="poster" src="' . getRelativePath('imdb_' . $imgsrc) . '">';
-        } else {
-          //Hallo
-          echo '<a target="poster" href="'
-          . 'https://www.filmposter-archiv.de/suche.php?'
-          . buildQuery([
-              'filmtitel' => $this->title
-          ]) . '">';
-          //from https://www.studiobinder.com/blog/downloads/movie-poster-template/
-          echo '<img class="poster" alt="poster" src="view.jpg">';
-          echo '</a>';
-        }
-        ?>
+    <?php
+    $imgsrc = $file . '.jpg';
+    if (file_exists(getFolderPath() . '/' . $imgsrc)) {
+      echo '<img class="poster" alt="poster" src="' . getRelativePath($imgsrc) . '">';
+    } elseif (file_exists(getFolderPath() . '/imdb_' . $imgsrc)) {
+      echo '<img class="poster" alt="poster" src="' . getRelativePath('imdb_' . $imgsrc) . '">';
+    } else {
+      //Hallo
+      echo '<a target="poster" href="'
+      . 'https://www.filmposter-archiv.de/suche.php?'
+      . buildQuery([
+          'filmtitel' => $this->title
+      ]) . '">';
+      //from https://www.studiobinder.com/blog/downloads/movie-poster-template/
+      echo '<img class="poster" alt="poster" src="view.jpg">';
+      echo '</a>';
+    }
+    ?>
 
         <div><dl class="moviedetails">
             <dt>Erscheinungsjahr</dt>
@@ -564,83 +562,83 @@ class Overview extends PageContent {
             <dd><?php echo $firstmovie->basics->genres; ?></dd>
             <dt>Regie</dt>
             <dd>
-              <?php
-              foreach ($firstmovie->directors as $director) {
-                if ($director !== $firstmovie->directors[0]) {
-                  echo ', ';
-                }
-                echo $director->primaryName;
-              }
-              ?>
+    <?php
+    foreach ($firstmovie->directors as $director) {
+      if ($director !== $firstmovie->directors[0]) {
+        echo ', ';
+      }
+      echo $director->primaryName;
+    }
+    ?>
             </dd>
             <dt>Drehbuch</dt>
             <dd>
-              <?php
-              if (empty($firstmovie->writers)) {
-                echo '-';
-              } else {
-                foreach ($firstmovie->writers as $writer) {
-                  if ($writer !== $firstmovie->writers[0]) {
-                    echo ', ';
-                  }
-                  echo $writer->primaryName;
-                  if ($firstmovie->crew && !empty($firstmovie->crew->writer)) {
-                    foreach ($firstmovie->crew->writer as $person) {
-                      if ($person->nconst === $writer->nconst &&
-                              strpos($person->job, 'screenplay') === false &&
-                              $person->job !== 'written by' &&
-                              $person->job !== '\\N') {
-                        echo ' <span class="character">(';
-                        echo $person->job;
-                        echo ')</span>';
-                      }
-                    }
-                  }
-                }
-              }
-              ?>
+    <?php
+    if (empty($firstmovie->writers)) {
+      echo '-';
+    } else {
+      foreach ($firstmovie->writers as $writer) {
+        if ($writer !== $firstmovie->writers[0]) {
+          echo ', ';
+        }
+        echo $writer->primaryName;
+        if ($firstmovie->crew && !empty($firstmovie->crew->writer)) {
+          foreach ($firstmovie->crew->writer as $person) {
+            if ($person->nconst === $writer->nconst &&
+                    strpos($person->job, 'screenplay') === false &&
+                    $person->job !== 'written by' &&
+                    $person->job !== '\\N') {
+              echo ' <span class="character">(';
+              echo $person->job;
+              echo ')</span>';
+            }
+          }
+        }
+      }
+    }
+    ?>
             </dd>
             <dt>FSK</dt>
             <dd><?php echo FSK_RATINGS[$this->fsk] ?></dd>
             <dt>Kodi Bezeichner</dt>
             <dd><?php
-              $kodiFilename = preg_replace("/([^\w\s\d\-_~,;\[\]\(\).])/u", '', $this->title);
-              $kodiFilename .= ' ('.$firstmovie->basics->startYear.')';
-              $kodiFilename .= ' [imdbid-'.$firstmovie->basics->tconst.']';
-              // Remove any runs of periods (thanks falstro!)
-              $kodiFilename = preg_replace("([\.]{2,})", '', $kodiFilename);
-              $ext = filter_input(INPUT_GET, 'ext');
-              $kodiFilename .= '.'.($ext ? $ext : 'mp4');
-              echo $kodiFilename;
-              ?></dd>
+          $kodiFilename = preg_replace("/([^\w\s\d\-_~,;\[\]\(\).])/u", '', $this->title);
+          $kodiFilename .= ' (' . $firstmovie->basics->startYear . ')';
+          $kodiFilename .= ' [imdbid-' . $firstmovie->basics->tconst . ']';
+          // Remove any runs of periods (thanks falstro!)
+          $kodiFilename = preg_replace("([\.]{2,})", '', $kodiFilename);
+          $ext = filter_input(INPUT_GET, 'ext');
+          $kodiFilename .= '.' . ($ext ? $ext : 'mp4');
+          echo $kodiFilename;
+    ?></dd>
           </dl></div>
 
         <div>
           <h2>Schauspieler</h2>
           <div>
             <ul class="crew">
-              <?php
-              $actorsAndActress = [];
-              if (property_exists($firstmovie->crew, 'actor')) {
-                foreach ($firstmovie->crew->actor as $person) {
-                  $actorsAndActress[intval($person->ordering)] = $person;
-                }
-              }
-              if (property_exists($firstmovie->crew,'actress')) {
-                foreach ($firstmovie->crew->actress as $person) {
-                  $actorsAndActress[intval($person->ordering)] = $person;
-                }
-              }
-              asort($actorsAndActress);
-              foreach ($actorsAndActress as $person) {
-                echo '<li>';
-                echo $person->primaryName;
-                echo ' <span class="character">';
-                echo $person->characters;
-                echo '</span>';
-                echo '</li>';
-              }
-              ?>
+    <?php
+    $actorsAndActress = [];
+    if (property_exists($firstmovie->crew, 'actor')) {
+      foreach ($firstmovie->crew->actor as $person) {
+        $actorsAndActress[intval($person->ordering)] = $person;
+      }
+    }
+    if (property_exists($firstmovie->crew, 'actress')) {
+      foreach ($firstmovie->crew->actress as $person) {
+        $actorsAndActress[intval($person->ordering)] = $person;
+      }
+    }
+    asort($actorsAndActress);
+    foreach ($actorsAndActress as $person) {
+      echo '<li>';
+      echo $person->primaryName;
+      echo ' <span class="character">';
+      echo $person->characters;
+      echo '</span>';
+      echo '</li>';
+    }
+    ?>
             </ul>
           </div>
         </div>
@@ -648,47 +646,47 @@ class Overview extends PageContent {
           <h2>weitere Mitarbeiter</h2>
           <div class="crewgroup">
             <ul class="crew">
-              <?php
-              $crew = [];
-              foreach ($firstmovie->crew as $gname => $group) {
-                if (!in_array($gname, ['actor', 'actress', 'director', 'writer'])) {
-                  foreach ($group as $person) {
-                    $crew[intval($person->ordering)] = $person;
-                  }
-                }
-              }
-              asort($crew);
-              foreach ($crew as $person) {
-                echo '<li>';
-                echo $person->primaryName;
-                echo ' <span class="character">';
-                echo $person->category;
-                if (!empty($person->job) &&
-                        $person->job !== '\\N' &&
-                        $person->job !== $person->category) {
-                  echo '/' . $person->job;
-                }
-                echo '</span>';
-                echo '</li>';
-              }
+    <?php
+    $crew = [];
+    foreach ($firstmovie->crew as $gname => $group) {
+      if (!in_array($gname, ['actor', 'actress', 'director', 'writer'])) {
+        foreach ($group as $person) {
+          $crew[intval($person->ordering)] = $person;
+        }
+      }
+    }
+    asort($crew);
+    foreach ($crew as $person) {
+      echo '<li>';
+      echo $person->primaryName;
+      echo ' <span class="character">';
+      echo $person->category;
+      if (!empty($person->job) &&
+              $person->job !== '\\N' &&
+              $person->job !== $person->category) {
+        echo '/' . $person->job;
+      }
+      echo '</span>';
+      echo '</li>';
+    }
 
-              if (!empty($firstmovie->knownForCrew)) {
-                ?>
+    if (!empty($firstmovie->knownForCrew)) {
+      ?>
               </ul>
               <ul class="extras crew">
-                <?php
-                foreach ($firstmovie->knownForCrew as $cat => $persons) {
-                  foreach ($persons as $person) {
-                    echo '<li>';
-                    echo $person->primaryName;
-                    echo ' <span class="character">';
-                    echo $cat;
-                    echo '</span>';
-                    echo '</li>';
-                  }
-                }
-              }
-              ?>
+      <?php
+      foreach ($firstmovie->knownForCrew as $cat => $persons) {
+        foreach ($persons as $person) {
+          echo '<li>';
+          echo $person->primaryName;
+          echo ' <span class="character">';
+          echo $cat;
+          echo '</span>';
+          echo '</li>';
+        }
+      }
+    }
+    ?>
             </ul>
           </div>
         </div>
@@ -704,25 +702,24 @@ class Overview extends PageContent {
         </div>
       </template>
 
-      <?php
-    }
+    <?php
+  }
+}
 
+class Search extends PageContent {
+
+  function writeHeadContent() {
+    echo '<h1>Suche</h1>';
   }
 
-  class Search extends PageContent {
+  function writeNavigationItems() {
+    echo '<li><a href="./?' . buildQuery() . '">Übersicht</a></li>';
+  }
 
-    function writeHeadContent() {
-      echo '<h1>Suche</h1>';
-    }
-
-    function writeNavigationItems() {
-      echo '<li><a href="./?' . buildQuery() . '">Übersicht</a></li>';
-    }
-
-    function writeHeaderContent() {
-      parent::writeHeaderContent();
-      ?>
-      <style><?php readfile('res/viewSearch.css')?></</style>
+  function writeHeaderContent() {
+    parent::writeHeaderContent();
+    ?>
+      <style><?php readfile('res/viewSearch.css') ?></</style>
       <script>
         document.addEventListener('DOMContentLoaded', () => {
           const fulltime = 10000;
@@ -751,39 +748,39 @@ class Overview extends PageContent {
           }
         });
       </script>
-      <?php
-    }
+    <?php
+  }
 
-    function writeMainContent() {
-      global $title;
-      //TODO: Filmdaten suchen
-      $query = filter_input(INPUT_GET, 'query');
-      $doSearch = !empty($query);
-      if ($doSearch) {
-        echo '<div class="searchlog">';
-        if (preg_match('/tt\d+/', $query)) {
-          $data = queryData(['!', $query]);
-        } else {
-          // $GLOBALS['scanTitles'] = true;
-          // $data1 = queryData(['?', $query]);
-          // $GLOBALS['scanTitles'] = false;
-          $data = queryData(['?', $query]);
-          // $data = array_merge($data1, $data2);
+  function writeMainContent() {
+    global $title;
+    //TODO: Filmdaten suchen
+    $query = filter_input(INPUT_GET, 'query');
+    $doSearch = !empty($query);
+    if ($doSearch) {
+      echo '<div class="searchlog">';
+      if (preg_match('/tt\d+/', $query)) {
+        $data = queryData(['!', $query]);
+      } else {
+        // $GLOBALS['scanTitles'] = true;
+        // $data1 = queryData(['?', $query]);
+        // $GLOBALS['scanTitles'] = false;
+        $data = queryData(['?', $query]);
+        // $data = array_merge($data1, $data2);
+      }
+      echo '</div>';
+      echo '<ol class="searchresult">';
+      usort($data, function ($a, $b) {
+        return strcasecmp($a->primaryTitle, $b->primaryTitle);
+      });
+      foreach ($data as $item) {
+        if (property_exists($item, 'basics')) {
+          $item = $item->basics;
         }
-        echo '</div>';
-        echo '<ol class="searchresult">';
-        usort($data, function ($a, $b) {
-          return strcasecmp($a->primaryTitle, $b->primaryTitle);
-        });
-        foreach ($data as $item) {
-          if (property_exists($item, 'basics')) {
-            $item = $item->basics;
-          }
-          echo '<li><a href="?' . buildQuery([
-              'title' => $item->tconst,
-              'file' => $title
-          ]) . '">' . $item->primaryTitle . ' (' . $item->startYear . ')</a>';
-          ?>
+        echo '<li><a href="?' . buildQuery([
+            'title' => $item->tconst,
+            'file' => $title
+        ]) . '">' . $item->primaryTitle . ' (' . $item->startYear . ')</a>';
+        ?>
           (<a target="imdb" href="https://www.imdb.com/title/<?php echo $item->tconst ?>/">IMDB</a>)
           <?php
           echo '</li>';
@@ -804,32 +801,31 @@ class Overview extends PageContent {
           <input type="hidden" name="title" value="<?php echo htmlspecialchars($title); ?>">
           <label>Suche <input name="query" size="50" value="<?php echo htmlspecialchars($query); ?>"></label>
           <input type="submit" value="Erneut suchen">
-          <?php
-          if (!$doSearch) {
-            ?><div id="autosearchtimeout" style="--progress:0%" data-progress=""></div><?php
+    <?php
+    if (!$doSearch) {
+      ?><div id="autosearchtimeout" style="--progress:0%" data-progress=""></div><?php
           } else {
             ?><div><a target="imdb" href="https://www.imdb.com/find?<?php
             echo http_build_query(['q' => $query]);
             ?>">IMDB durchsuchen</a></div><?php
-                  }
-                  ?>
+          }
+          ?>
         </form>
       </div>
-      <?php
-      //echo '<pre>';print_r($data);echo '</pre>';
-    }
+            <?php
+            //echo '<pre>';print_r($data);echo '</pre>';
+          }
+        }
 
-  }
+        class ViewLists extends PageContent {
 
-  class ViewLists extends PageContent {
+          function __construct() {
+            parent::__construct();
+            $this->listname = filter_input(INPUT_GET, 'list');
+          }
 
-    function __construct() {
-      parent::__construct();
-      $this->listname = filter_input(INPUT_GET, 'list');
-    }
-
-    function writeHeadContent() {
-      ?><h1>Filmliste - <?php echo $this->listname; ?></h1><?php
+          function writeHeadContent() {
+            ?><h1>Filmliste - <?php echo $this->listname; ?></h1><?php
     }
 
     function getNavigationCaption() {
@@ -894,7 +890,7 @@ class Overview extends PageContent {
     function writeHeaderContent() {
       parent::writeHeaderContent();
       ?>
-      <style><?php readfile('res/viewLists.css')?></</style>
+      <style><?php readfile('res/viewLists.css') ?></</style>
       <script>
         lastSelectedGroup = null;
         function toggleView(evt) {
@@ -991,7 +987,6 @@ class Overview extends PageContent {
     }
     echo '</dl>';
   }
-
 }
 
 class PageError extends PageContent {
@@ -1006,121 +1001,122 @@ class PageError extends PageContent {
       <p>
         <a href="view.php?<?php echo buildQuery([]); ?>">zur Übersicht</a>
       </p>
-      <?php
-    }
-
+    <?php
   }
+}
 
-  function showMovieLocally($file) {
-    $ext = filter_input(INPUT_GET, 'ext');
-    $moviefile = getFolderPath() . '\\' . $file . '.' . ($ext ? $ext : 'mp4');
-    error_log('starting ' . $moviefile, 4);
-    switch (PHP_OS_FAMILY) {
-      case 'Windows':
-        system('cmd.exe /C start "movie" "' . $moviefile . '"');
-        break;
-      default:
-        exec($moviefile);
-    }
+function showMovieLocally($file) {
+  $ext = filter_input(INPUT_GET, 'ext');
+  $moviefile = getFolderPath() . '\\' . $file . '.' . ($ext ? $ext : 'mp4');
+  error_log('starting ' . $moviefile, 4);
+  switch (PHP_OS_FAMILY) {
+    case 'Windows':
+      system('cmd.exe /C start "movie" "' . $moviefile . '"');
+      break;
+    default:
+      exec($moviefile);
   }
+}
 
-  if (false === serveStaticFiles()) {
-    return false;
-  }
+$nonStatic = serveStaticFiles();
+if (false === $nonStatic) {
   logRequest();
+  return false;
+}
+logRequest();
 
 //if (filter_input(INPUT_SERVER, 'REQUEST_URI') === '/info.php') {
 //  phpinfo();
 //  return;
 //}
 
-  if (!empty($file = filter_input(INPUT_POST, 'file'))) {
-    uploadPosterImage();
-    return;
-  }
+if (!empty($file = filter_input(INPUT_POST, 'file'))) {
+  uploadPosterImage();
+  return;
+}
 
-  $q = array();
-  $query=filter_input(INPUT_SERVER, 'QUERY_STRING');
-  if($query) {
-    parse_str($query, $q);
-  }
+$q = array();
+$query = filter_input(INPUT_SERVER, 'QUERY_STRING');
+if ($query) {
+  parse_str($query, $q);
+}
 //print_r($q);
 
-  $file = filter_input(INPUT_GET, 'file');
-  $title = filter_input(INPUT_GET, 'title');
+$file = filter_input(INPUT_GET, 'file');
+$title = filter_input(INPUT_GET, 'title');
 //$query = filter_input(INPUT_GET, 'query');
-  unset($q['ext']);
+unset($q['ext']);
 
-  if (!empty($file)) {
-    if (!empty($title)) {
-      saveJsonData(getFolderPath(), $file, $title);
-      return;
-    }
+if (!empty($file)) {
+  if (!empty($title)) {
+    saveJsonData(getFolderPath(), $file, $title);
+    return;
   }
+}
 
-  if (empty($q)) {
+if (empty($q)) {
 //----- ----- ----- -----  U E B E R S I C H T  ----- ----- ----- -----
-    $page = new Overview();
-  } else if (!empty($file)) {
+  $page = new Overview();
+} else if (!empty($file)) {
 //----- ----- ----- -----  D E T A I L S  ----- ----- ----- -----
-    switch (filter_input(INPUT_GET, 'action')) {
-      case 'json':
-        Header('Content-Type: application/json');
-        $jsonFile = getFolderPath() . '/' . $file . '.json';
-        if (file_exists($jsonFile)) {
-          header('Content-Disposition: inline; filename="' . $file . '.json"');
-          readfile($jsonFile);
-        } else {
-          http_response_code(404);
-          echo '{"message":"not found"}';
-        }
-        return;
-      case 'play':
-        Header('Location: ?' . buildQuery(['file' => $file]), 307);
-        showMovieLocally($file);
-        break;
-      default:
-        $page = new Details();
-    }
-  } else if (!empty($title)) {
-//----- ----- ----- -----  S U C H E  ----- ----- ----- -----
-    $page = new Search();
-  } else if (!empty(filter_input(INPUT_GET, 'list'))) {
-//----- ----- ----- -----  L I S T E N  ----- ----- ----- -----
-    $page = new ViewLists();
-  } else if (!empty(filter_input(INPUT_GET, 'path'))) {
-    $page = new Overview();
-  } else {
-//----- ----- ----- -----  F E H L E R  ----- ----- ----- -----
-    $page = new PageError();
+  switch (filter_input(INPUT_GET, 'action')) {
+    case 'json':
+      Header('Content-Type: application/json');
+      $jsonFile = getFolderPath() . '/' . $file . '.json';
+      if (file_exists($jsonFile)) {
+        header('Content-Disposition: inline; filename="' . $file . '.json"');
+        readfile($jsonFile);
+      } else {
+        http_response_code(404);
+        echo '{"message":"not found"}';
+      }
+      return;
+    case 'play':
+      Header('Location: ?' . buildQuery(['file' => $file]), 307);
+      showMovieLocally($file);
+      break;
+    default:
+      $page = new Details();
   }
+} else if (!empty($title)) {
+//----- ----- ----- -----  S U C H E  ----- ----- ----- -----
+  $page = new Search();
+} else if (!empty(filter_input(INPUT_GET, 'list'))) {
+//----- ----- ----- -----  L I S T E N  ----- ----- ----- -----
+  $page = new ViewLists();
+} else if (!empty(filter_input(INPUT_GET, 'path'))) {
+  $page = new Overview();
+} else {
+//----- ----- ----- -----  F E H L E R  ----- ----- ----- -----
+  $page = new PageError();
+}
 
 //phpinfo();
 //return;
-  function writeCommonCSS() {
-    echo '<style>';
-    readfile('res/view.css');
-    echo '</style>';
-  }
+function writeCommonCSS() {
+  echo '<style>';
+  readfile('res/view.css');
+  echo '</style>';
+}
 
 //----- ----- ----- -----  P L A I N   H T M L  ----- ----- ----- -----
-    ?>
+?>
   <!DOCTYPE html>
   <html>
     <head>
       <title>Local IMDB View</title>
-      <?php $page->writeHeaderContent(); ?>    
+  <?php $page->writeHeaderContent(); ?>    
     </head>
     <body>
       <header>
-        <?php $page->writeHeadContent(); ?>
+<?php $page->writeHeadContent(); ?>
       </header>
       <nav>
         <ul<?php
-        $cap = $page->getNavigationCaption();
-        echo empty($cap) ? '' : (" data-caption='$cap'");
-        ?>>
-          <?php $page->writeNavigationItems(); ?>
+$cap = $page->getNavigationCaption();
+echo empty($cap) ? '' : (" data-caption='$cap'");
+?>>
+<?php $page->writeNavigationItems(); ?>
         </ul>
       </nav>
       <main>
