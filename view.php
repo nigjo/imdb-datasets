@@ -342,7 +342,12 @@ class Overview extends PageContent {
         echo '>';
         if (file_exists($rootdir . '/' . $base . '.json')) {
           echo '<a href="?' . buildQuery(['file' => $base]) . '">';
-          echo $base;
+          if(str_contains($base, '[imdbid-')){
+            //echo preg_replace('\s*\[imdb(id)?-tt\d+\]', ''));
+            echo preg_replace('/\s*\[imdb(id)?-tt\d+\]/', '', $base);
+          } else {
+            echo $base;
+          }
           echo '</a>';
         } else {
           echo '<a class="missing" href="?' . buildQuery(['title' => $base]) . '">';
@@ -597,6 +602,17 @@ class Overview extends PageContent {
             </dd>
             <dt>FSK</dt>
             <dd><?php echo FSK_RATINGS[$this->fsk] ?></dd>
+            <dt>Kodi Bezeichner</dt>
+            <dd><?php
+              $kodiFilename = preg_replace("/([^\w\s\d\-_~,;\[\]\(\).])/u", '', $this->title);
+              $kodiFilename .= ' ('.$firstmovie->basics->startYear.')';
+              $kodiFilename .= ' [imdbid-'.$firstmovie->basics->tconst.']';
+              // Remove any runs of periods (thanks falstro!)
+              $kodiFilename = preg_replace("([\.]{2,})", '', $kodiFilename);
+              $ext = filter_input(INPUT_GET, 'ext');
+              $kodiFilename .= '.'.($ext ? $ext : 'mp4');
+              echo $kodiFilename;
+              ?></dd>
           </dl></div>
 
         <div>
