@@ -53,12 +53,15 @@ Promise.all([
   }
 });
 
-function updatePath() {
+function updatePath(suffix = null) {
+  let path = '/';
   if (query.has('path')) {
-    document.getElementById('currentpath').textContent = '/' + query.get('path');
-  } else {
-    document.getElementById('currentpath').textContent = '/';
+    path += query.get('path');
   }
+  if (suffix) {
+    path += ' - ' + suffix;
+  }
+  document.getElementById('currentpath').textContent = path;
 }
 
 function writeError(message) {
@@ -343,6 +346,42 @@ function writeDetails(data) {
       addDetail(list, 'Laufzeit', imdb['basics']['runtimeMinutes'] + ' min');
       addDetail(list, 'Genre', imdb['basics']['genres']);
       addDetail(list, 'Identifier', imdb['basics']['tconst']);
+
+      let title = imdb['basics']['primaryTitle'];
+      let deFound = false;
+      let someFound = false;
+      for (let aka of imdb['aka']) {
+        if (aka['region'] === 'DE') {
+          if (aka['types'] === 'imdbDisplay') {
+            title = aka['title'];
+            break;
+          }
+          if (aka['types'] === 'short title' || aka['types'] === 'promotional title') {
+            if (!deFound) {
+              title = aka['title'];
+            }
+          } else {
+            title = aka['title'];
+          }
+          deFound = true;
+          someFound = true;
+        } else if (aka['region'] === 'XWG') {
+          if (!deFound) {
+            title = aka['title'];
+            someFound = true;
+          }
+        } else if (aka['region'] === 'AT') {
+          if (!deFound) {
+            title = aka['title'];
+            someFound = true;
+          }
+        } else if (aka['region'] === 'XWW') {
+          if (!someFound) {
+            title = aka['title'];
+          }
+        }
+      }
+      updatePath(title);
     }
 
     const addListOfNames = (list, term, data, jobs = []) => {
