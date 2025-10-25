@@ -1,0 +1,83 @@
+/* 
+    Created on : Oct 23, 2025, 10:27:44 PM
+    Author     : nigjo
+*/
+:root{
+  font-family: sans-serif;
+  color-scheme: light dark;
+}
+body {
+  display: grid;
+  grid-template-columns:minmax(min-content,15em) 1fr;
+  header,footer{
+    grid-column-start: 1;
+    grid-column-end: 3;
+  }
+  nav{
+    grid-column-start: 1;
+    grid-column-end: 2;
+    overflow: hidden;
+  }
+  main{
+    grid-column-start: 2;
+    grid-column-end: 3;
+  }
+}
+header{
+  h2{
+    font-family: Consolas,monospace
+  }
+}
+
+main.overview{
+  display:flex;
+  flex-wrap: wrap;
+  .movie{
+    position: relative;
+    box-sizing: border-box;
+    border:0px lightblue dotted;
+    width: calc(120px + 1em);
+    padding:.5em;
+    .poster{
+      width:120px;
+      height:160px;
+      margin-bottom:.5em;
+      img{
+        display:block;
+        margin: 0px auto;
+        max-width:120px;
+        max-height:160px;
+        aspect-ratio:auto;
+        box-shadow: light-dark(rgba(0, 0, 0, 0.4), rgba(128, 128, 128, 0.2)) 0px 4px 16px 0px;
+      }
+    }
+    .movietitle{
+      font-family:Consolas;
+      font-size: .8em;
+      white-space: wrap;
+      word-break: break-word;
+    }
+    .infos{
+      position: absolute;
+      top:.5em;
+      right:.75em;
+      background-color:rgb(128,128,128);
+      border-radius: 0 0 0 .5em;
+      padding:0 .25em;
+      *[data-src]{
+        display: inline;
+        color:light-dark(white,black);
+      }
+    }
+    &.nodbdata{
+      .movietitle{
+        color: light-dark( darkred, lightcoral);
+      }
+    }
+    &.nonfo{
+      .movietitle{
+        font-style: italic;
+      }
+    }
+  }
+}
