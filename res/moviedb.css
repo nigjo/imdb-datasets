@@ -42,6 +42,7 @@ main.overview{
       width:120px;
       height:160px;
       margin-bottom:.5em;
+      cursor: pointer;
       img{
         display:block;
         margin: 0px auto;
@@ -77,6 +78,45 @@ main.overview{
     &.nonfo{
       .movietitle{
         font-style: italic;
+      }
+    }
+  }
+}
+
+main.details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .5em 1em;
+  .poster{
+    img{
+      display:block;
+      max-width:240px;
+      max-height:320px;
+    }
+  }
+  .moviedetails dl{
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: .5em 0;
+    dt{
+      display: flex;
+      font-variant: small-caps;
+      align-self: end;
+      &:after{
+        content:'';
+        flex-grow: 1;
+        border-bottom:1px dotted currentColor;
+        min-width: .5em;
+        margin:0px .25em;
+        /*! vertical-align: top; */
+        /*! display: inline-block; */
+      }
+    }
+    dd{
+      margin-left: 0px;
+      .job{
+        font-size: .75em;
+        color:rgb(128,128,128);
       }
     }
   }

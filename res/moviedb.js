@@ -218,7 +218,7 @@ function writeOverview(data) {
 
 function writeDetails(data) {
   document.body.classList.add('loading');
-  console.log('DETAIlS', data);
+  console.debug('DETAIlS', data);
   const main = document.createDocumentFragment();
 
   const posterblock = document.createElement('div');
@@ -266,27 +266,84 @@ function writeDetails(data) {
     })
   ]).then(infos => {
     document.body.classList.remove('loading');
-    console.log(infos);
+    console.debug(infos);
     const imdb = infos[0];
     const addDetail = (list, term, detail) => {
+      console.debug('DETAIL', term, detail);
       const defterm = document.createElement('dt');
       defterm.textContent = term;
       list.append(defterm);
       const defdesc = document.createElement('dd');
-      defdesc.textContent = detail;
+      if (Array.isArray(detail)) {
+        defdesc.replaceChildren(...detail
+                .map((item, idx) => {
+                  if (Array.isArray(item)) {
+                    let span = document.createElement('span');
+                    span.className = 'job';
+                    span.textContent = ' (' + item[1] + ')';
+                    if (idx > 0) {
+                      return [
+                        document.createTextNode(', '),
+                        document.createTextNode(item[0]),
+                        span];
+                    } else {
+                      return [document.createTextNode(item[0]), span];
+                    }
+                  } else {
+                    if (idx > 0) {
+                      return [
+                        document.createTextNode(', '),
+                        document.createTextNode(item)];
+                    } else {
+                      return document.createTextNode(item);
+                    }
+                  }
+                })
+                .flat()
+                );
+      } else {
+        defdesc.textContent = detail;
+      }
       list.append(defdesc);
     };
+    const list = document.createElement('dl');
+    detailsblock.append(list);
     if ('basics' in imdb) {
-
-      const list = document.createElement('dl');
-      detailsblock.append(list);
-
       addDetail(list, 'Erscheinungsjahr', imdb['basics']['startYear']);
       addDetail(list, 'Laufzeit', imdb['basics']['runtimeMinutes'] + ' min');
       addDetail(list, 'Genre', imdb['basics']['genres']);
     }
-    //addDetail(list, 'Regie', imdb['directors'][]);
-    //addDetail(list, 'Drehbuch', imdb['writers'][]);
+    const addListOfNames = (list, term, data, jobs = []) => {
+      const idJobs = new Map(jobs
+              .filter(i => i['job'] !== '\\N')
+              .map(i => [i['nconst'], i['job']])
+              );
+      console.debug('JOBS', jobs, idJobs);
+      const names = data
+              .map(i => {
+                if (idJobs.has(i['nconst'])) {
+                  return [i['primaryName'], idJobs.get(i['nconst'])];
+                } else {
+                  return i['primaryName'];
+                }
+              });
+      addDetail(list, term, names);
+    };
+
+    if ('directors' in imdb) {
+      if ('crew' in imdb && 'director' in imdb['crew']) {
+        addListOfNames(list, 'Regie', imdb['directors'], imdb['crew']['director']);
+      } else {
+        addListOfNames(list, 'Regie', imdb['directors']);
+      }
+    }
+    if ('writers' in imdb) {
+      if ('crew' in imdb && 'writer' in imdb['crew']) {
+        addListOfNames(list, 'Drehbuch', imdb['writers'], imdb['crew']['writer']);
+      } else {
+        addListOfNames(list, 'Drehbuch', imdb['writers']);
+      }
+    }
   });
 
   document.querySelector('main').replaceChildren(main);
