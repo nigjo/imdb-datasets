@@ -218,7 +218,7 @@ function writeOverview(data) {
 
 function writeDetails(data) {
   document.body.classList.add('loading');
-  console.debug('DETAIlS', data);
+  console.debug('DETAILS', data);
   const main = document.createDocumentFragment();
 
   const posterblock = document.createElement('div');
@@ -262,12 +262,42 @@ function writeDetails(data) {
       }
     }),
     new Promise((ok, no) => {
-      ok({});
+      if ('nfo' in data) {
+        return fetch(query.get('path') + '/' + data['nfo']).then(r => {
+          if (r.ok) {
+            return r.text();
+          }
+          console.warn(data['nfo'], r);
+          return null;
+        }).then(text => {
+          if (text) {
+            const parser = new DOMParser();
+            return parser.parseFromString(text, "application/xml");
+          }
+        }).then(loaded => {
+          if (loaded) {
+            let imdb = loaded.evaluate('/movie/imdbid', loaded, null,
+                    XPathResult.STRING_TYPE, null);
+            console.debug('XML', loaded, imdb);
+            if (imdb && imdb.stringValue) {
+              return loaded;
+            }
+          } else {
+            console.debug('xml', loaded);
+          }
+          return null;
+        }).then(ok);
+      } else {
+        ok(null);
+      }
     })
   ]).then(infos => {
     document.body.classList.remove('loading');
-    console.debug(infos);
+    console.debug('INFOS', infos);
+
     const imdb = infos[0];
+    const nfo = infos[1];
+
     const addDetail = (list, term, detail) => {
       console.debug('DETAIL', term, detail);
       const defterm = document.createElement('dt');
@@ -312,7 +342,9 @@ function writeDetails(data) {
       addDetail(list, 'Erscheinungsjahr', imdb['basics']['startYear']);
       addDetail(list, 'Laufzeit', imdb['basics']['runtimeMinutes'] + ' min');
       addDetail(list, 'Genre', imdb['basics']['genres']);
+      addDetail(list, 'Identifier', imdb['basics']['tconst']);
     }
+
     const addListOfNames = (list, term, data, jobs = []) => {
       const idJobs = new Map(jobs
               .filter(i => i['job'] !== '\\N')
@@ -342,6 +374,25 @@ function writeDetails(data) {
         addListOfNames(list, 'Drehbuch', imdb['writers'], imdb['crew']['writer']);
       } else {
         addListOfNames(list, 'Drehbuch', imdb['writers']);
+      }
+    }
+
+    if (nfo) {
+      let result;
+      result = nfo.evaluate('/movie/imdbid', nfo, null,
+              XPathResult.STRING_TYPE, null);
+      if (result.stringValue) {
+        addDetail(list, "IMDB-ID", result.stringValue);
+      }
+      result = nfo.evaluate('/movie/mpaa', nfo, null,
+              XPathResult.STRING_TYPE, null);
+      if (result.stringValue) {
+        addDetail(list, "Freigabe", result.stringValue);
+      }
+      result = nfo.evaluate('/movie/fileinfo/streamdetails/video/height', nfo, null,
+              XPathResult.STRING_TYPE, null);
+      if (result.stringValue) {
+        addDetail(list, "Auflösung", result.stringValue + 'p');
       }
     }
   });
