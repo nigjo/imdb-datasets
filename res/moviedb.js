@@ -277,18 +277,19 @@ function writeDetails(data) {
             const parser = new DOMParser();
             return parser.parseFromString(text, "application/xml");
           }
-        }).then(loaded => {
-          if (loaded) {
-            let imdb = loaded.evaluate('/movie/imdbid', loaded, null,
-                    XPathResult.STRING_TYPE, null);
-            console.debug('XML', loaded, imdb);
-            if (imdb && imdb.stringValue) {
-              return loaded;
-            }
-          } else {
-            console.debug('xml', loaded);
-          }
-          return null;
+//        }).then(loaded => {
+//          if (loaded) {
+//            let imdb = loaded.evaluate('/movie/imdbid', loaded, null,
+//                    XPathResult.STRING_TYPE, null);
+//            console.debug('XML', loaded, imdb);
+//            if (imdb && imdb.stringValue)
+//            {
+//              return loaded;
+//            }
+//          } else {
+//            console.debug('xml', loaded);
+//          }
+//          return null;
         }).then(ok);
       } else {
         ok(null);
@@ -300,6 +301,16 @@ function writeDetails(data) {
 
     const imdb = infos[0];
     const nfo = infos[1];
+
+    const filterKodiName = (filename) => {
+      let kodiFilename = filename;
+      kodiFilename = kodiFilename.replace(': ', ' - ');
+      kodiFilename = kodiFilename.replace(':', '-');
+      kodiFilename = kodiFilename.replace(/([^\w\s\d\-_~,;\[\]\(\).])/gu, '');
+      return kodiFilename;
+    };
+
+    let kodiFilename = filterKodiName(data['/title']);
 
     const addDetail = (list, term, detail) => {
       console.debug('DETAIL', term, detail);
@@ -382,6 +393,10 @@ function writeDetails(data) {
         }
       }
       updatePath(title);
+
+      kodiFilename = filterKodiName(title);
+      kodiFilename += ' (' + imdb['basics']['startYear'] + ')';
+      kodiFilename += ' [imdbid-' + imdb['basics']['tconst'] + ']';
     }
 
     const addListOfNames = (list, term, data, jobs = []) => {
@@ -432,8 +447,14 @@ function writeDetails(data) {
               XPathResult.STRING_TYPE, null);
       if (result.stringValue) {
         addDetail(list, "Auflösung", result.stringValue + 'p');
+        kodiFilename += ' - ' + result.stringValue + 'p';
       }
     }
+
+    kodiFilename += '.' + data['/movie'];
+    // Remove any runs of periods (thanks falstro!)
+    kodiFilename = kodiFilename.replace(/([\.]{2,})/g, '');
+    addDetail(list, 'Kodi Bezeichner', kodiFilename);
   });
 
   document.querySelector('main').replaceChildren(main);
