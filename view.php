@@ -9,22 +9,47 @@ const FSK_RATINGS = [
     18 => 'Nicht freigegeben'
 ];
 
+const MIME_TYPES = [
+    "css" => "text/css",
+    "jpeg" => "image/jpeg",
+    "jpg" => "image/jpeg",
+    "png" => "image/png",
+    "ico" => "image/x-icon",
+    "js" => "text/javascript",
+    "json" => "application/json",
+    "html" => "text/html"
+];
+
 function serveStaticFiles() {
   $request = filter_input(INPUT_SERVER, 'REQUEST_URI');
-  if (preg_match('/\.(jpg|png|ico|css|js|html)$/', $request)) {
-    if (file_exists(basename($request))) {
+  $pinfo = pathinfo($request);
+  if("php"===$pinfo['extension']){
+    include_once $pinfo['basename'];
+    return;
+  }
+
+  $extensions = implode("|", array_keys(MIME_TYPES));  
+
+  if (preg_match('/\.(' . $extensions . ')$/', $request)) {
+    if (file_exists($pinfo['basename'])) {
       logRequest();
-      header('Content-Type: '
-              . mime_content_type(basename($request)));
-      echo file_get_contents(basename($request));
+      $ct = array_key_exists($pinfo['extension'], MIME_TYPES) ?
+              MIME_TYPES[$pinfo['extension']] :
+              mime_content_type($pinfo['basename']);
+      error_log($ct, 4);
+      header('Content-Type: ' . $ct);
+      echo file_get_contents($pinfo['basename']);
       return;
     }
     if ("/res" === dirname($request)) {
-      $base = basename($request);
-      $resname = 'res/' . $base;
+      $resname = 'res/' . $pinfo['basename'];
       if (file_exists($resname)) {
         logRequest();
-        header('Content-Type: ' . mime_content_type($resname));
+        $ct = array_key_exists($pinfo['extension'], MIME_TYPES) ?
+                MIME_TYPES[$pinfo['extension']] :
+                mime_content_type($pinfo['basename']);
+        error_log($ct, 4);
+        header('Content-Type: ' . $ct);
         echo file_get_contents($resname);
         return;
       }
@@ -1129,7 +1154,7 @@ class Overview extends PageContent {
         $cap = $page->getNavigationCaption();
         echo empty($cap) ? '' : (" data-caption='$cap'");
         ?>>
-          <?php $page->writeNavigationItems(); ?>
+            <?php $page->writeNavigationItems(); ?>
         </ul>
       </nav>
       <main>
