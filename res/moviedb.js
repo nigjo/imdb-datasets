@@ -33,9 +33,22 @@ Promise.all([
     writeNav([]);
   }
 
-  if(query.has('file')){
-    writeDetails(response.data[query.get('file')]);
-  }else{
+  if (query.has('file')) {
+    const fileid = query.get('file');
+    let found = false;
+    for (var i = 0, max = response.data['*filecount']; i < max; i++) {
+      const info = response.data[i];
+      const mfile = info[info['/movie']];
+      if (mfile === fileid) {
+        found = true;
+        writeDetails(info);
+        break;
+      }
+    }
+    if (!found) {
+      writeError("Keine Daten zu '" + query.get('file') + "' gefunden.");
+    }
+  } else {
     writeOverview(response.data);
   }
 });
@@ -91,17 +104,17 @@ function writeNav(navdata) {
 }
 
 function writeOverview(data) {
-  console.log(data);
+  console.log('OVERVIEW', data);
   let num = data['*filecount'];
   const main = document.createDocumentFragment();
   var sorted = [];
   for (var i = 0; i < num; i++) {
     const fileinfo = data[i];
-    const removals = ['the','a','der','die','das','ein'];
-    const toremove = new RegExp('^('+removals.join('|')+') ');
+    const removals = ['the', 'a', 'der', 'die', 'das', 'ein'];
+    const toremove = new RegExp('^(' + removals.join('|') + ') ');
     var sortkey = fileinfo['/title'].toLowerCase();
-    sortkey = sortkey.replace(toremove,'');
-    sortkey = 'm_'+sortkey.replace(/[^\p{Lowercase}\p{digit}]/gv,'');
+    sortkey = sortkey.replace(toremove, '');
+    sortkey = 'm_' + sortkey.replace(/[^\p{Lowercase}\p{digit}]/gv, '');
     sorted[sortkey] = fileinfo;
     sorted[i] = sortkey;
   }
@@ -110,7 +123,7 @@ function writeOverview(data) {
 
   for (var i = 0; i < num; i++) {
     const files = sorted[sorted[i]];
-    if(!files){
+    if (!files) {
       console.warn(i, sorted[i], files);
       continue;
     }
@@ -144,30 +157,40 @@ function writeOverview(data) {
     block.append(infoblock);
     let div;
     div = document.createElement('div');
-    div.dataset.src='db';
+    div.dataset.src = 'db';
     div.title = "IMDB Data";
-    if (!('json' in files)){
+    if (!('json' in files)) {
       block.classList.add('nodbdata');
       div.textContent = '\u24BE'; // (I) = "IMDB"
       div.title += " missing";
-    }else{
+      //TODO: do search
+      posterblock.onclick = () => {
+        alert('search not implemented, yet');
+      };
+    } else {
       div.textContent = '\uD83C\uDD58'; // (I) = "IMDB"
+      posterblock.onclick = () => {
+        const target = new URLSearchParams(query);
+        target.set('file', files[files['/movie']]);
+        //writeDetails(files);
+        location.href = '?' + target;
+      };
     }
     infoblock.append(div);
     div = document.createElement('div');
-    div.dataset.src='nfo';
+    div.dataset.src = 'nfo';
     div.title = "Jellyfin Data";
-    if (!('nfo' in files)){
+    if (!('nfo' in files)) {
       block.classList.add('nonfo');
       div.textContent = '\u24BF'; // (J) = "Jellyfin"
       div.title += " missing";
-    }else{
+    } else {
       div.textContent = '\uD83C\uDD59'; // (J) = "Jellyfin"
     }
     infoblock.append(div);
     div = document.createElement('div');
-    div.dataset.src='file';
-    switch(files['/movie']){
+    div.dataset.src = 'file';
+    switch (files['/movie']) {
       case 'avi':
         div.textContent = '\uD83C\uDD50'; // (A) = "AVI"
         break;
@@ -183,7 +206,7 @@ function writeOverview(data) {
     }
     div.title = files['/kind'];
     infoblock.append(div);
-    if ('avi' in files){
+    if ('avi' in files) {
       block.classList.add('legacyfmt');
     }
 
@@ -191,4 +214,81 @@ function writeOverview(data) {
   }
   document.querySelector('main').replaceChildren(main);
   document.querySelector('main').className = 'overview';
+}
+
+function writeDetails(data) {
+  document.body.classList.add('loading');
+  console.log('DETAIlS', data);
+  const main = document.createDocumentFragment();
+
+  const posterblock = document.createElement('div');
+  posterblock.className = 'poster';
+  const poster = document.createElement('img');
+  poster.alt = 'Filmposter';
+  if ('jpg' in data) {
+    poster.src = query.has('path')
+            ? query.get('path') + '/' + data['jpg']
+            : data['jpg'];
+  } else {
+    poster.src = 'view.jpg';
+  }
+  posterblock.append(poster);
+  main.append(posterblock);
+
+  const detailsblock = document.createElement('div');
+  detailsblock.className = 'moviedetails';
+  main.append(detailsblock);
+  Promise.all([
+    new Promise((ok, no) => {
+      if ('json' in data) {
+        return fetch(query.get('path') + '/' + data['json']).then(r => {
+          if (r.ok)
+            return r.json();
+          console.warn(data['json'], r);
+          return {};
+        }).then(loaded => {
+          if (Array.isArray(loaded)) {
+            return loaded[0];
+          }
+          if ('version' in loaded) {
+            if (loaded['version'] !== 2) {
+              return {};
+            }
+            return loaded['imdb'][0];
+          }
+        }).then(ok);
+      } else {
+        ok({});
+      }
+    }),
+    new Promise((ok, no) => {
+      ok({});
+    })
+  ]).then(infos => {
+    document.body.classList.remove('loading');
+    console.log(infos);
+    const imdb = infos[0];
+    const addDetail = (list, term, detail) => {
+      const defterm = document.createElement('dt');
+      defterm.textContent = term;
+      list.append(defterm);
+      const defdesc = document.createElement('dd');
+      defdesc.textContent = detail;
+      list.append(defdesc);
+    };
+    if ('basics' in imdb) {
+
+      const list = document.createElement('dl');
+      detailsblock.append(list);
+
+      addDetail(list, 'Erscheinungsjahr', imdb['basics']['startYear']);
+      addDetail(list, 'Laufzeit', imdb['basics']['runtimeMinutes'] + ' min');
+      addDetail(list, 'Genre', imdb['basics']['genres']);
+    }
+    //addDetail(list, 'Regie', imdb['directors'][]);
+    //addDetail(list, 'Drehbuch', imdb['writers'][]);
+  });
+
+  document.querySelector('main').replaceChildren(main);
+  document.querySelector('main').className = 'details';
 }
