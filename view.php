@@ -23,7 +23,7 @@ const MIME_TYPES = [
 function serveStaticFiles() {
   $request = filter_input(INPUT_SERVER, 'REQUEST_URI');
   $pinfo = pathinfo($request);
-  if("php"===$pinfo['extension']){
+  if(!empty($pinfo['extension']) && "php"===$pinfo['extension']){
     include_once $pinfo['basename'];
     return;
   }
