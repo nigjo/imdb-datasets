@@ -1,5 +1,8 @@
 <?php
 
+//Router Script for serving static files from this folder or
+//from "current DOCUMENT_ROOT" if not found here.
+
 function __moviedbMain() {
   $fullrequest = filter_input(INPUT_SERVER, 'REQUEST_URI');
   $query = '?'.filter_input(INPUT_SERVER, 'QUERY_STRING');
