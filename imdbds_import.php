@@ -13,13 +13,16 @@ if(file_exists($dbfile)){
 function gzfilesize($filename) {
   $gzfs = FALSE;
   if(($zp = fopen($filename, 'r'))!==FALSE) {
-    if(@fread($zp, 2) == "\x1F\x8B") { // this is a gzip'd file
+    if(fread($zp, 2) == "\x1F\x8B") { // this is a gzip'd file
       fseek($zp, -4, SEEK_END);
-      if(strlen($datum = @fread($zp, 4))==4)
+      if(strlen($datum = fread($zp, 4))==4)
+      {
         extract(unpack('Vgzfs', $datum));
-    }
-    else // not a gzip'd file, revert to regular filesize function
+      }
+    } else {
+      // not a gzip'd file, revert to regular filesize function
       $gzfs = filesize($filename);
+    }
     fclose($zp);
   }
   return($gzfs);
@@ -84,10 +87,16 @@ function loadDataset($db, $filepath){
     if($count%$progressdelta===0){
       $loadposition = ftell($in);
       $progress = floor(($loadposition / $filesize)*100);
-      if($progress>0)
-        echo 'line '.$count.' - '.$progress."%\r";
-      else
-        echo 'line '.$count."\r";
+      if ($progress > 0) {
+        echo 'line ' . $count . ' - ' . $progress . "%\r";
+      } else {
+        echo 'line ' . $count . "\r";
+      }
+      if ($count === 9000) {
+        $progressdelta = 10000;
+      } elseif ($count === 90000) {
+        $progressdelta = 100000;
+      }
     }
   }
   echo 'line '.$count.' - 100%'."\r";
