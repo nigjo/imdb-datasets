@@ -1,6 +1,15 @@
 import {text, registerText} from './moviedb_text.js';
 import * as dbbasics from './moviedb_basics.js';
 
+registerText({
+  'de': {
+    ov_has_imdb: 'IMDB Daten vorhanden',
+    ov_no_imdb: 'keine IMDB Daten',
+    ov_has_nfo: 'Jellyfin Daten vorhanden',
+    ov_no_nfo: 'keine Jellyfin Daten',
+    ov_poster: 'Filmposter'
+  }
+});
 
 function writeOverview(data) {
   console.log('OVERVIEW', data);
@@ -31,7 +40,7 @@ function writeOverview(data) {
     const posterblock = document.createElement('div');
     posterblock.className = 'poster';
     const poster = document.createElement('img');
-    poster.alt = 'Filmposter';
+    poster.alt = text('ov_poster');
     if (num > 20) {
       poster.setAttribute('loading', 'lazy');
     }
@@ -57,11 +66,11 @@ function writeOverview(data) {
     let div;
     div = document.createElement('div');
     div.dataset.src = 'db';
-    div.title = "IMDB Data";
+    div.title = text('ov_has_imdb');
     if (!('json' in files)) {
       block.classList.add('nodbdata');
       div.textContent = '\u24BE'; // (I) = "IMDB"
-      div.title += " missing";
+      div.title = text('ov_no_imdb');
       //TODO: do search
       posterblock.onclick = () => {
         alert('search not implemented, yet');
@@ -78,11 +87,11 @@ function writeOverview(data) {
     infoblock.append(div);
     div = document.createElement('div');
     div.dataset.src = 'nfo';
-    div.title = "Jellyfin Data";
+    div.title = text('ov_has_nfo');
     if (!('nfo' in files)) {
       block.classList.add('nonfo');
       div.textContent = '\u24BF'; // (J) = "Jellyfin"
-      div.title += " missing";
+      div.title = text('ov_no_nfo');
     } else {
       div.textContent = '\uD83C\uDD59'; // (J) = "Jellyfin"
     }
