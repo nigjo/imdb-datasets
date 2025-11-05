@@ -85,7 +85,7 @@ function writeNav(navdata) {
       target.set('path', parts.join('/'));
     }
     link.href = '?' + target;
-    link.textContent = 'zurück';
+    link.textContent = text('nav_back');
     item.append(link);
     root.append(item);
   }
@@ -353,10 +353,10 @@ function writeDetails(data) {
     const list = document.createElement('dl');
     detailsblock.append(list);
     if ('basics' in imdb) {
-      addDetail(list, 'Erscheinungsjahr', imdb['basics']['startYear']);
-      addDetail(list, 'Laufzeit', imdb['basics']['runtimeMinutes'] + ' min');
-      addDetail(list, 'Genre', imdb['basics']['genres']);
-      addDetail(list, 'Identifier', imdb['basics']['tconst']);
+      addDetail(list, text('term_year'), imdb['basics']['startYear']);
+      addDetail(list, text('term_length'), imdb['basics']['runtimeMinutes'] + ' min');
+      addDetail(list, text('term_genre'), imdb['basics']['genres']);
+      addDetail(list, text('term_databaseid'), imdb['basics']['tconst']);
 
       let title = imdb['basics']['primaryTitle'];
       let deFound = false;
@@ -418,16 +418,16 @@ function writeDetails(data) {
 
     if ('directors' in imdb) {
       if ('crew' in imdb && 'director' in imdb['crew']) {
-        addListOfNames(list, 'Regie', imdb['directors'], imdb['crew']['director']);
+        addListOfNames(list, text('term_director'), imdb['directors'], imdb['crew']['director']);
       } else {
-        addListOfNames(list, 'Regie', imdb['directors']);
+        addListOfNames(list, text('term_director'), imdb['directors']);
       }
     }
     if ('writers' in imdb) {
       if ('crew' in imdb && 'writer' in imdb['crew']) {
-        addListOfNames(list, 'Drehbuch', imdb['writers'], imdb['crew']['writer']);
+        addListOfNames(list, text('term_writer'), imdb['writers'], imdb['crew']['writer']);
       } else {
-        addListOfNames(list, 'Drehbuch', imdb['writers']);
+        addListOfNames(list, text('term_writer'), imdb['writers']);
       }
     }
 
@@ -436,17 +436,17 @@ function writeDetails(data) {
       result = nfo.evaluate('/movie/imdbid', nfo, null,
               XPathResult.STRING_TYPE, null);
       if (result.stringValue) {
-        addDetail(list, "IMDB-ID", result.stringValue);
+        addDetail(list, text('term_imdbid'), result.stringValue);
       }
       result = nfo.evaluate('/movie/mpaa', nfo, null,
               XPathResult.STRING_TYPE, null);
       if (result.stringValue) {
-        addDetail(list, "Freigabe", result.stringValue);
+        addDetail(list, text('term_mpaa'), result.stringValue);
       }
       result = nfo.evaluate('/movie/fileinfo/streamdetails/video/height', nfo, null,
               XPathResult.STRING_TYPE, null);
       if (result.stringValue) {
-        addDetail(list, "Auflösung", result.stringValue + 'p');
+        addDetail(list, text('term_quality'), result.stringValue + 'p');
         kodiFilename += ' - ' + result.stringValue + 'p';
       }
     }
@@ -454,9 +454,39 @@ function writeDetails(data) {
     kodiFilename += '.' + data['/movie'];
     // Remove any runs of periods (thanks falstro!)
     kodiFilename = kodiFilename.replace(/([\.]{2,})/g, '');
-    addDetail(list, 'Kodi Bezeichner', kodiFilename);
+    addDetail(list, text('term_kodi_name'), kodiFilename);
   });
 
   document.querySelector('main').replaceChildren(main);
   document.querySelector('main').className = 'details';
 }
+
+function text(key){
+  if(LOCALE in LOCALES && key in LOCALES[LOCALE]){
+    return LOCALES[LOCALE][key];
+  }
+  if('de' in LOCALES && key in LOCALES['de']){
+    return LOCALES['de'][key];
+  }
+  return key;
+}
+
+const LOCALE = 'de';
+const LOCALES = {
+  'de':{
+    'nav_back': 'zurück',
+    'term_year': 'Erscheinungsjahr',
+    'term_length': 'Laufzeit',
+    'term_genre': 'Genre',
+    'term_databaseid': 'Datenbank ID',
+    'term_director': 'Regie',
+    'term_writer': 'Drehbuch',
+    'term_imdbid': 'IMDB-ID',
+    'term_mpaa': 'Altersfreigabe',
+    'term_quality': 'Videoauflösung',
+    'term_kodi_name': 'Kodi Bezeichner'
+  },
+  'en':{
+    'term_kodi_name': 'Kodi Identifier'
+  }
+};
