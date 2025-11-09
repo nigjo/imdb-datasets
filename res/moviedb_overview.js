@@ -75,19 +75,15 @@ function writeOverview(data) {
       block.classList.add('nodbdata');
       div.textContent = '\u24BE'; // (I) = "IMDB"
       div.title = text('ov_no_imdb');
-      //TODO: do search
-      posterblock.onclick = () => {
-        alert('search not implemented, yet');
-      };
     } else {
       div.textContent = '\uD83C\uDD58'; // (I) = "IMDB"
-      posterblock.onclick = () => {
-        const target = new URLSearchParams(dbbasics.query);
-        target.set('file', files[files['/movie']]);
-        //writeDetails(files);
-        location.href = '?' + target;
-      };
     }
+    posterblock.onclick = () => {
+      const target = new URLSearchParams(dbbasics.query);
+      target.set('file', files[files['/movie']]);
+      //writeDetails(files);
+      location.href = '?' + target;
+    };
     infoblock.append(div);
     div = document.createElement('div');
     div.dataset.src = 'nfo';
