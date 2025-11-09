@@ -48,6 +48,10 @@ function writeOverview(data) {
       poster.src = dbbasics.query.has('path')
               ? dbbasics.query.get('path') + '/' + files['jpg']
               : files['jpg'];
+    } else if ('/meta-poster' in files) {
+      poster.src = dbbasics.query.has('path')
+              ? dbbasics.query.get('path') + '/' + files['/meta-poster']
+              : files['/meta-poster'];
     } else {
       poster.src = 'view.jpg';
     }
