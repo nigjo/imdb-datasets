@@ -3,20 +3,20 @@ import * as dbbasics from './moviedb_basics.js';
 
 registerText({
   'de': {
-    'nav_overview': 'Übersicht',
-    'term_year': 'Erscheinungsjahr',
-    'term_length': 'Laufzeit',
-    'term_genre': 'Genre',
-    'term_databaseid': 'Datenbank ID',
-    'term_director': 'Regie',
-    'term_writer': 'Drehbuch',
-    'term_imdbid': 'IMDB-ID',
-    'term_mpaa': 'Altersfreigabe',
-    'term_quality': 'Videoauflösung',
-    'term_kodi_name': 'Kodi Bezeichner'
+    'details.nav_overview': 'Übersicht',
+    'details.term_year': 'Erscheinungsjahr',
+    'details.term_length': 'Laufzeit',
+    'details.term_genre': 'Genre',
+    'details.term_databaseid': 'Datenbank ID',
+    'details.term_director': 'Regie',
+    'details.term_writer': 'Drehbuch',
+    'details.term_imdbid': 'IMDB-ID',
+    'details.term_mpaa': 'Altersfreigabe',
+    'details.term_quality': 'Videoauflösung',
+    'details.term_kodi_name': 'Kodi Bezeichner'
   },
   'en': {
-    'term_kodi_name': 'Kodi Identifier'
+    'details.term_kodi_name': 'Kodi Identifier'
   }
 });
 
@@ -26,7 +26,7 @@ function writeDetails(data) {
   
   dbbasics.addNav([
     {
-      '&': text('nav_overview'),
+      '&': text('details.nav_overview'),
       path: dbbasics.query.get('path')
     }
   ]);
@@ -162,10 +162,10 @@ function writeDetails(data) {
     const list = document.createElement('dl');
     detailsblock.append(list);
     if ('basics' in imdb) {
-      addDetail(list, text('term_year'), imdb['basics']['startYear']);
-      addDetail(list, text('term_length'), imdb['basics']['runtimeMinutes'] + ' min');
-      addDetail(list, text('term_genre'), imdb['basics']['genres']);
-      addDetail(list, text('term_databaseid'), imdb['basics']['tconst']);
+      addDetail(list, text('details.term_year'), imdb['basics']['startYear']);
+      addDetail(list, text('details.term_length'), imdb['basics']['runtimeMinutes'] + ' min');
+      addDetail(list, text('details.term_genre'), imdb['basics']['genres']);
+      addDetail(list, text('details.term_databaseid'), imdb['basics']['tconst']);
 
       let title = imdb['basics']['primaryTitle'];
       let deFound = false;
@@ -227,16 +227,16 @@ function writeDetails(data) {
 
     if ('directors' in imdb) {
       if ('crew' in imdb && 'director' in imdb['crew']) {
-        addListOfNames(list, text('term_director'), imdb['directors'], imdb['crew']['director']);
+        addListOfNames(list, text('details.term_director'), imdb['directors'], imdb['crew']['director']);
       } else {
-        addListOfNames(list, text('term_director'), imdb['directors']);
+        addListOfNames(list, text('details.term_director'), imdb['directors']);
       }
     }
     if ('writers' in imdb) {
       if ('crew' in imdb && 'writer' in imdb['crew']) {
-        addListOfNames(list, text('term_writer'), imdb['writers'], imdb['crew']['writer']);
+        addListOfNames(list, text('details.term_writer'), imdb['writers'], imdb['crew']['writer']);
       } else {
-        addListOfNames(list, text('term_writer'), imdb['writers']);
+        addListOfNames(list, text('details.term_writer'), imdb['writers']);
       }
     }
 
@@ -245,17 +245,17 @@ function writeDetails(data) {
       result = nfo.evaluate('/movie/imdbid', nfo, null,
               XPathResult.STRING_TYPE, null);
       if (result.stringValue) {
-        addDetail(list, text('term_imdbid'), result.stringValue);
+        addDetail(list, text('details.term_imdbid'), result.stringValue);
       }
       result = nfo.evaluate('/movie/mpaa', nfo, null,
               XPathResult.STRING_TYPE, null);
       if (result.stringValue) {
-        addDetail(list, text('term_mpaa'), result.stringValue);
+        addDetail(list, text('details.term_mpaa'), result.stringValue);
       }
       result = nfo.evaluate('/movie/fileinfo/streamdetails/video/height', nfo, null,
               XPathResult.STRING_TYPE, null);
       if (result.stringValue) {
-        addDetail(list, text('term_quality'), result.stringValue + 'p');
+        addDetail(list, text('details.term_quality'), result.stringValue + 'p');
         kodiFilename += ' - ' + result.stringValue + 'p';
       }
     }
@@ -263,7 +263,7 @@ function writeDetails(data) {
     kodiFilename += '.' + data['/movie'];
     // Remove any runs of periods (thanks falstro!)
     kodiFilename = kodiFilename.replace(/([\.]{2,})/g, '');
-    addDetail(list, text('term_kodi_name'), kodiFilename);
+    addDetail(list, text('details.term_kodi_name'), kodiFilename);
   });
 
   document.querySelector('main').replaceChildren(main);
