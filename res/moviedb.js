@@ -1,6 +1,8 @@
 import * as dbbasics from './moviedb_basics.js';
 import {text, registerText} from './moviedb_text.js';
 
+const LOGGER = 'MOVIEDB';
+
 function loadPage(pagename, pagedata) {
   import('./moviedb_' + pagename + '.js').then(page => {
     console.debug('DB', 'loaded', page);
@@ -32,15 +34,6 @@ Promise.all([
     dbbasics.writeError(response.message);
     return;
   }
-  if ('/' in response.data) {
-    response.data['/'].sort(
-            (a, b) => a.localeCompare(b, 'de', {'sensitivity': 'base'})
-    );
-    writeNav(response.data['/']);
-    delete response.data['/'];
-  } else {
-    writeNav([]);
-  }
 
   if (dbbasics.query.has('file')) {
     const fileid = dbbasics.query.get('file');
@@ -50,7 +43,7 @@ Promise.all([
       const mfile = info[info['/movie']];
       if (mfile === fileid) {
         found = true;
-        if('json' in info)
+        if ('json' in info)
           loadPage('details', info);
         else
           loadPage('search', info);
@@ -63,6 +56,17 @@ Promise.all([
   } else {
     loadPage('overview', response.data);
   }
+
+  if ('/' in response.data) {
+    response.data['/'].sort(
+            (a, b) => a.localeCompare(b, 'de', {'sensitivity': 'base'})
+    );
+    writeNav(response.data['/']);
+    delete response.data['/'];
+  } else {
+    writeNav([]);
+  }
+
 });
 
 registerText({
@@ -73,36 +77,33 @@ registerText({
 
 
 function writeNav(navdata) {
-  let root = document.createElement('ul');
 
   if (dbbasics.query.has('path')) {
-    let item = document.createElement('li');
-    let link = document.createElement('a');
     let path = dbbasics.query.get('path');
-    let parts = path.split('/');
-    parts.pop();
-    let target = new URLSearchParams();
-    if (parts.length > 0) {
-      target.set('path', parts.join('/'));
+    console.debug(LOGGER, 'path', path);
+    if (path !== '') {
+      let parts = path.split('/');
+      parts.pop();
+      console.debug(LOGGER, 'parts', parts);
+      const parentLink = {'&': text('nav_folder_up')};
+      if (parts.length > 0) {
+        parentLink.path = parts.join('/');
+      }
+      dbbasics.addNav([parentLink]);
     }
-    link.href = '?' + target;
-    link.textContent = text('nav_folder_up');
-    item.append(link);
-    root.append(item);
   }
 
+  const subs = [];
   for (var entry of navdata) {
-    let item = document.createElement('li');
-    let link = document.createElement('a');
-    let target = new URLSearchParams();
-    target.set('path', dbbasics.query.has('path')
+    const link = {};
+    link.path = dbbasics.query.has('path')
             ? dbbasics.query.get('path') + '/' + entry
-            : entry
-            );
-    link.href = '?' + target;
-    link.textContent = entry;
-    item.append(link);
-    root.append(item);
+            : entry;
+    link['&'] = entry;
+    subs.push(link);
   }
-  document.querySelector('nav').replaceChildren(root);
+
+  if (subs.length > 0) {
+    dbbasics.addNav(subs);
+  }
 }
