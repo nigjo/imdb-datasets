@@ -3,6 +3,7 @@ import * as dbbasics from './moviedb_basics.js';
 
 registerText({
   'de': {
+    'nav_overview': 'Übersicht',
     'term_year': 'Erscheinungsjahr',
     'term_length': 'Laufzeit',
     'term_genre': 'Genre',
@@ -22,6 +23,14 @@ registerText({
 function writeDetails(data) {
   document.body.classList.add('loading');
   console.debug('DETAILS', data);
+  
+  dbbasics.addNav([
+    {
+      '&': text('nav_overview'),
+      path: dbbasics.query.get('path')
+    }
+  ]);
+  
   const main = document.createDocumentFragment();
 
   const posterblock = document.createElement('div');
