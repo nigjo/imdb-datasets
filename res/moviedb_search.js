@@ -8,6 +8,8 @@ registerText({
     'search.poster_alt': 'Filmposter',
     'search.label': 'Suchebegriff',
     'search.button': 'Suchen',
+    'search.akaTitle': 'Alternativtitel',
+    'search.originalTitle': 'Originaltitel',
     'search.cap_title': 'Titel',
     'search.cap_aka': 'Alternativtitel',
     'search.cap_like_title': 'Im Title',
@@ -174,14 +176,28 @@ function doSearch(evt) {
     searchFor(text('search.cap_title'), 'title', term).then(() =>
       searchFor(text('search.cap_aka'), 'aka', term)
     ).then(() =>
-      searchFor(text('search.cap_like_title'), 'likeTitle', term)
+      searchFor(text('search.cap_like_title'), 'likeTitle', term, (r1, r2) => {
+        return r1.primaryTitle.localeCompare(r2.primaryTitle, "en", {sensitivity: "base"});
+      })
     ).then(() =>
-      searchFor(text('search.cap_like_aka'), 'likeAka', term)
+      searchFor(text('search.cap_like_aka'), 'likeAka', term, (r1, r2) => {
+        if ('akaTitle' in r1 && 'akaTitle' in r2) {
+          const delta = r1.akaTitle.localeCompare(r2.akaTitle, "de", {sensitivity: "base"});
+          if (delta !== 0) {
+            return delta;
+          }
+        } else if ('akaTitle' in r1) {
+          return -1;
+        } else if ('akaTitle' in r2) {
+          return 1;
+        }
+        return r1.primaryTitle.localeCompare(r2.primaryTitle, "en", {sensitivity: "base"});
+      })
     );
   }
 }
 
-function searchFor(caption, mode, term) {
+function searchFor(caption, mode, term, sorter) {
   let data = new FormData();
   data.set('mode', mode);
   data.set('query', term);
@@ -197,20 +213,27 @@ function searchFor(caption, mode, term) {
   }).then(r =>
     r.ok ? r.json() : {}
   ).then(data =>
-    showResult(data)
-  ).catch(e =>
+    showResult(data, sorter)
+  ).catch(e => {
+    console.error(e);
     document.getElementById('results')
-            .lastChild.replaceWith('FEHLER: ' + e)
-  );
+            .lastChild.replaceWith('FEHLER: ' + e);
+  });
 }
 
-function showResult(data) {
-  console.log(LOGGER, 'result', data);
+function showResult(data, sorter) {
+  console.debug(LOGGER, 'result', data);
 
   let resultsDiv = document.getElementById('results');
   if ('results' in data && data.results.length !== 0) {
+
+    let results = data.results;
+    if (sorter) {
+      results = results.toSorted(sorter);
+    }
+
     const list = document.createElement('dl');
-    for (var item of data.results) {
+    for (var item of results) {
 
       if (foundTcons.includes(item.tconst)) {
         continue;
@@ -221,10 +244,17 @@ function showResult(data) {
       const term = document.createElement('dt');
       term.textContent = item.primaryTitle;
       if (item.primaryTitle !== item.originalTitle) {
-        term.append(' / ', '"' + item.originalTitle + '"');
+        const span = document.createElement('span');
+        span.textContent = '"' + item.originalTitle + '"';
+        span.title = text('search.originalTitle');
+        term.append(' / ', span);
       }
       if ("akaTitle" in item) {
-        term.append(' / ', '"' + item.akaTitle + '"');
+        term.insertAdjacentText('afterbegin', ' / ');
+        const span = document.createElement('span');
+        span.textContent = '"' + item.akaTitle + '"';
+        span.title = text('search.akaTitle');
+        term.insertAdjacentElement('afterbegin', span);
       }
       list.append(term);
       const value = document.createElement('dd');
@@ -232,7 +262,7 @@ function showResult(data) {
       let defs = [];
 
       if (item.runtimeMinutes !== '\\N')
-        defs.push(item.runtimeMinutes + 'min');
+        defs.push(item.runtimeMinutes + ' min');
       if (item.startYear !== '\\N')
         defs.push(item.startYear);
       if (item.genres !== '\\N')
@@ -248,9 +278,9 @@ function showResult(data) {
       imdblink.target = 'IMDB';
       defs.push(imdblink);
 
-      console.debug(LOGGER, defs);
+      //console.debug(LOGGER, defs);
       const mapped = defs.map((element, idx) => idx > 0 ? [' - ', element] : element);
-      console.debug(LOGGER, mapped);
+      //console.debug(LOGGER, mapped);
       value.append(...mapped.flat());
       list.append(value);
     }
