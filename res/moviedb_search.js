@@ -3,6 +3,21 @@ import * as dbbasics from './moviedb_basics.js';
 
 const LOGGER = 'SEARCH';
 
+registerText({
+  'de': {
+    'search.poster_alt': 'Filmposter',
+    'search.label': 'Suchebegriff',
+    'search.button': 'Suchen',
+    'search.cap_title': 'Titel',
+    'search.cap_aka': 'Alternativtitel',
+    'search.cap_like_title': 'Im Title',
+    'search.cap_like_aka': 'Im Alternativtitel',
+    'search.cap_ldbid': 'Datenbank ID',
+    'search.no_results': 'Keine Ergebnisse',
+    'search.imdb_link': 'IMDB'
+  }
+});
+
 function writeSearchPage(data) {
   document.body.classList.add('loading');
   //console.debug(LOGGER, data);
@@ -11,7 +26,7 @@ function writeSearchPage(data) {
   const posterblock = document.createElement('div');
   posterblock.className = 'poster';
   const poster = document.createElement('img');
-  poster.alt = 'Filmposter';
+  poster.alt = text('search.poster_alt');
   if ('jpg' in data) {
     poster.src = dbbasics.query.has('path')
             ? dbbasics.query.get('path') + '/' + data['jpg']
@@ -74,7 +89,7 @@ function writeSearchPage(data) {
 //          <input type="hidden" name="title" value="<?php echo htmlspecialchars($title); ?>">
 //          <label>Suche <input name="query" size="50" value="<?php echo htmlspecialchars($query); ?>"></label>
     const labelBlock = document.createElement('label');
-    labelBlock.append('Suche ');
+    labelBlock.append(text('search.label'), ' ');
     const searchfield = document.createElement('input');
     searchfield.setAttribute('name', 'query');
     searchfield.setAttribute('size', '50');
@@ -87,9 +102,9 @@ function writeSearchPage(data) {
     formBlock.append(labelBlock);
 //          <input type="submit" value="Erneut suchen">
     const button = document.createElement('button');
-    button.textContent = 'Suche';
+    button.textContent = text('search.button');
     button.onclick = doSearch;
-    formBlock.append(button);
+    formBlock.append(' ', button);
 //          <?php
 //          if (!$doSearch) {//
 //            ?><div id="autosearchtimeout" style="--progress:0%" data-progress=""></div><?php
@@ -154,14 +169,14 @@ function doSearch(evt) {
 
   if (term.match(/^tt\d+$/)) {
     // Direkt die ID suchen
-    searchFor("Datenbank ID", 'imdbid', term);
+    searchFor(text('search.cap_dbid'), 'imdbid', term);
   } else {
-    searchFor("Titel", 'title', term).then(() =>
-      searchFor("Alternativtitel", 'aka', term)
+    searchFor(text('search.cap_title'), 'title', term).then(() =>
+      searchFor(text('search.cap_aka'), 'aka', term)
     ).then(() =>
-      searchFor("Im Titel", 'likeTitle', term)
+      searchFor(text('search.cap_like_title'), 'likeTitle', term)
     ).then(() =>
-      searchFor("Im Alternativtitel", 'likeAka', term)
+      searchFor(text('search.cap_like_aka'), 'likeAka', term)
     );
   }
 }
@@ -206,10 +221,10 @@ function showResult(data) {
       const term = document.createElement('dt');
       term.textContent = item.primaryTitle;
       if (item.primaryTitle !== item.originalTitle) {
-        term.textContent += ' / "' + item.originalTitle + '"';
+        term.append(' / ', '"' + item.originalTitle + '"');
       }
       if ("akaTitle" in item) {
-        term.textContent += ' / "' + item.akaTitle + '"';
+        term.append(' / ', '"' + item.akaTitle + '"');
       }
       list.append(term);
       const value = document.createElement('dd');
@@ -229,10 +244,10 @@ function showResult(data) {
 //              + ' -  ' + item.genres;
       const imdblink = document.createElement('a');
       imdblink.href = 'https://www.imdb.com/title/' + item.tconst;
-      imdblink.textContent = 'IMDB';
+      imdblink.textContent = text('search.imdb_link');
       imdblink.target = 'IMDB';
       defs.push(imdblink);
-      
+
       console.debug(LOGGER, defs);
       const mapped = defs.map((element, idx) => idx > 0 ? [' - ', element] : element);
       console.debug(LOGGER, mapped);
@@ -242,7 +257,7 @@ function showResult(data) {
     resultsDiv.lastChild.replaceWith(list);
   } else {
     const noitems = document.createElement('p');
-    noitems.textContent = 'Keine Ergebnisse';
+    noitems.textContent = text('search.no_results');
     resultsDiv.lastChild.replaceWith(noitems);
   }
 }
