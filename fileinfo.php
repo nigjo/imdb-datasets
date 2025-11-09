@@ -33,6 +33,10 @@ function getFolderPath($relative = false, $subpath = false) {
 }
 
 function findFiles() {
+  $knownSuffixes = [
+      'poster', 'backdrop', 'landscape', 'logo', 'cover', 'banner', 'folder',
+      'default', 'movie', 'background', 'art', 'fanart', 'clearlogo', 'thumb'
+  ];
   $knownMovieExtensions = [
       'avi' => 'AVI',
       'mp4' => 'MPEG-4',
@@ -44,6 +48,7 @@ function findFiles() {
   ];
   $basedir = getFolderPath();
   $files = array();
+  //$files['debug']=array();
   $folders = array();
   //$imgcount = 0;
   $dir = opendir($basedir);
@@ -57,19 +62,29 @@ function findFiles() {
       if (!array_key_exists('extension', $pathinfo)) {
         continue;
       }
-      if (!array_key_exists($pathinfo['filename'], $files)) {
-        $files[$pathinfo['filename']] = array();
-      }
+      $filebase = $pathinfo['filename'];
       $ext = $pathinfo['extension'];
-      $files[$pathinfo['filename']][$ext] = $pathinfo['basename'];
+      $dash = null;
+      if (false != ($dash = strrpos($filebase, '-'))) {
+        $suffix = substr($filebase, $dash + 1);
+        //$files['debug'][$filebase] = $suffix;
+        if (in_array($suffix, $knownSuffixes)) {
+          $ext = '/meta-' . $suffix;
+          $filebase = substr($filebase, 0, $dash);
+        }
+      }
+      if (!array_key_exists($filebase, $files)) {
+        $files[$filebase] = array();
+      }
+      $files[$filebase][$ext] = $pathinfo['basename'];
       if (array_key_exists($ext, $knownMovieExtensions)) {
-        $title = $pathinfo['filename'];
+        $title = $filebase;
         if (str_contains($title, '[imdbid-')) {
           $title = preg_replace('/\s*\[imdb(id)?-tt\d+\]/', '', $title);
         }
-        $files[$pathinfo['filename']]['/title'] = $title;
-        $files[$pathinfo['filename']]['/movie'] = $ext;
-        $files[$pathinfo['filename']]['/kind'] = $knownMovieExtensions[$ext];
+        $files[$filebase]['/title'] = $title;
+        $files[$filebase]['/movie'] = $ext;
+        $files[$filebase]['/kind'] = $knownMovieExtensions[$ext];
       }
     }
   }
@@ -81,6 +96,7 @@ function findFiles() {
     $movieFiles['/'] = $folders;
   }
   sort($files);
+  //file_put_contents('fileinfo.files.json', json_encode($files));
   foreach ($files as $data) {
     if (!is_array($data) || !array_key_exists('/movie', $data)) {
       continue;
@@ -89,6 +105,7 @@ function findFiles() {
     }
     ++$movieFiles['*filecount'];
   }
+  file_put_contents('fileinfo.movies.json', json_encode($movieFiles));
   return $movieFiles;
 }
 
