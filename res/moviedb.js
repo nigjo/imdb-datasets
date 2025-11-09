@@ -50,7 +50,10 @@ Promise.all([
       const mfile = info[info['/movie']];
       if (mfile === fileid) {
         found = true;
-        loadPage('details', info);
+        if('json' in info)
+          loadPage('details', info);
+        else
+          loadPage('search', info);
         break;
       }
     }
@@ -64,7 +67,7 @@ Promise.all([
 
 registerText({
   'de': {
-    nav_back: 'zurück'
+    nav_folder_up: 'Elternverzeichnis'
   }
 });
 
@@ -83,7 +86,7 @@ function writeNav(navdata) {
       target.set('path', parts.join('/'));
     }
     link.href = '?' + target;
-    link.textContent = text('nav_back');
+    link.textContent = text('nav_folder_up');
     item.append(link);
     root.append(item);
   }
