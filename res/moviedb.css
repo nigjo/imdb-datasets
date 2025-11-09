@@ -121,3 +121,13 @@ main.details {
     }
   }
 }
+
+main.search {
+  dl{
+    margin-left: 1em;
+    dd{
+      margin-left:2em;
+      color:light-dark(darkgray, dimgray);
+    }
+  }
+}
